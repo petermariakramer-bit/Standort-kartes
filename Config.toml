@@ -1,0 +1,7 @@
+[theme]
+base = "light"
+primaryColor = "#0071e3"  # Das klassische Apple-Link-Blau
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F7" # Apple hellgrau für Hintergründe
+textColor = "#1d1d1f" # Fast schwarz, aber weicher (Apple Standard)
+font = "sans serif"
