@@ -19,15 +19,12 @@ st.set_page_config(
 # --- SESSION STATE ---
 if 'page' not in st.session_state:
     st.session_state.page = 'Übersicht'
-
 if 'menu_open' not in st.session_state:
     st.session_state.menu_open = False
-
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [52.51, 13.48] 
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 12
-
 if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
 
@@ -59,12 +56,12 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (IPHONE FORCE FIX) ---
+# --- CSS DESIGN (ULTIMATE FIX) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
     .stApp { background-color: #ffffff !important; }
-    html, body, p, div, label, h1, h2, h3, .stMarkdown, span {
+    html, body, p, div, label, h1, h2, h3, .stMarkdown, span, li {
         color: #000000 !important;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
@@ -78,90 +75,72 @@ st.markdown("""
         max-width: 100% !important; 
     }
 
-    /* 2. AGGRESSIVER BUTTON FIX (IPHONE) */
-    /* Wir müssen -webkit-appearance nutzen, um das iPhone Design zu überschreiben */
-    
-    button:not([kind="primary"]) {
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
+    /* 2. BUTTON FIX (HINTERGRUND WEISS ERZWINGEN) */
+    /* Wir setzen den Hintergrund auf WEISS statt transparent, um schwarze Blöcke zu verhindern */
+    div.stButton > button {
+        background-color: #ffffff !important;
         color: #000000 !important;
+        border: none !important;
         box-shadow: none !important;
-        
-        /* Das hier verhindert das graue Kästchen auf dem iPhone: */
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
+        text-shadow: none !important;
+        background-image: none !important; /* Wichtig gegen Farbverläufe */
+        padding: 5px !important;
     }
 
-    /* Auch der Container muss transparent sein */
-    div.stButton > button:not([kind="primary"]) {
-        background-color: transparent !important;
-        border: 0px !important;
-    }
-
-    /* Hover und Focus States müssen auch transparent bleiben */
-    button:not([kind="primary"]):hover,
-    button:not([kind="primary"]):active,
-    button:not([kind="primary"]):focus,
-    button:not([kind="primary"]):visited {
-        background: transparent !important;
-        background-color: transparent !important;
-        color: #0071e3 !important; /* Blau beim Klicken */
+    /* Hover State */
+    div.stButton > button:hover {
+        background-color: #ffffff !important;
+        color: #0071e3 !important; /* Blau beim Drüberfahren */
+        border: none !important;
         box-shadow: none !important;
-        outline: none !important;
     }
 
-    /* 3. PRIMARY BUTTONS (Bleiben wie sie sind) */
-    button[kind="primary"] {
+    /* Active/Focus State */
+    div.stButton > button:active, div.stButton > button:focus {
+        background-color: #ffffff !important;
+        color: #0071e3 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 3. PRIMARY BUTTONS (Ausnahme für wichtige Buttons) */
+    /* Diese Buttons sollen sichtbar bleiben (Blau mit weißem Text) */
+    div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
         border-radius: 8px !important;
         padding: 10px 20px !important;
-        -webkit-appearance: none !important; /* Auch hier wichtig für saubere Ränder */
+        margin-top: 10px !important;
+        border: none !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #005bb5 !important;
+        color: #ffffff !important;
     }
 
-    /* 4. TITEL */
+    /* 4. LAYOUT ANPASSUNGEN */
     .app-title {
         font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
     }
     
-    /* 5. MENÜ BUTTON */
-    div[data-testid="column"]:nth-of-type(2) button {
-        float: right;
-        font-size: 24px !important;
-        color: #0071e3 !important;
-    }
-
-    /* 6. MENÜ BOX */
+    /* Menü Box Styling */
     .menu-box {
         background-color: #fbfbfd;
+        border: 1px solid #e5e5ea;
         border-radius: 12px;
-        padding: 15px;
+        padding: 10px;
         margin-top: 10px;
         margin-bottom: 20px;
-        border: 1px solid #e5e5ea;
     }
-    .menu-box button {
+    
+    /* Links bündige Buttons in der Liste */
+    .list-btn-container button {
         text-align: left !important;
         width: 100% !important;
-        font-size: 18px !important;
-        padding: 12px 5px !important;
-        border-bottom: 1px solid #f0f0f0 !important;
-        color: #000000 !important;
-    }
-
-    /* 7. LISTE FIX */
-    div[data-testid="column"] button {
-        text-align: left !important;
-        width: 100% !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        color: #000000 !important;
     }
 
     .address-text {
-        font-size: 13px; color: #86868b !important; 
+        font-size: 13px; color: #666666 !important; 
         margin-top: -5px; line-height: 1.3; 
     }
     hr { margin: 0; border-color: #e5e5ea; }
@@ -170,12 +149,13 @@ st.markdown("""
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
+    
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- HEADER & NAVIGATION ---
+# --- HEADER ---
 c_head_title, c_head_btn = st.columns([7, 1])
 
 with c_head_title:
@@ -187,21 +167,26 @@ with c_head_btn:
         toggle_menu()
         st.rerun()
 
-# --- MENÜ INHALT ---
+# --- MENÜ ---
 if st.session_state.menu_open:
     with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-        if st.button("🏠  Übersicht", key="nav_home"): set_page("Übersicht"); st.rerun()
-        if st.button("⚙️  Verwaltung", key="nav_admin"): set_page("Verwaltung"); st.rerun()
-        if st.button("➕  Neuer Eintrag", key="nav_add"): set_page("Neuer Eintrag"); st.rerun()
+        # Wir nutzen Columns im Menü für bessere Struktur
+        c_m1, c_m2, c_m3 = st.columns(3)
+        with c_m1:
+            if st.button("🏠 Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
+        with c_m2:
+            if st.button("⚙️ Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
+        with c_m3:
+            if st.button("➕ Neu", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
-# --- DATEN LOGIK ---
+# --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_force_transparent")
+geolocator = Nominatim(user_agent="berlin_white_bg")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -232,9 +217,9 @@ if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL
-        # Zurück Button
         c_back, c_dummy = st.columns([1,4])
         with c_back:
+            # Hier nutzen wir keinen Primary Button, damit er sich ins Design einfügt
             if st.button("← Zurück", key="back_btn"):
                 st.session_state.detail_id = None
                 st.rerun()
@@ -278,10 +263,12 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button
+                            # Wir fügen eine Klasse hinzu, um Links-Alignierung zu erzwingen
+                            st.markdown('<div class="list-btn-container">', unsafe_allow_html=True)
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
+                            st.markdown('</div>', unsafe_allow_html=True)
                             
                             addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
@@ -321,7 +308,7 @@ elif st.session_state.page == 'Verwaltung':
     
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten", type="primary"):
+        if uploaded_file and st.button("Import starten", type="primary"): # Primary Button (Blau)
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
@@ -388,7 +375,7 @@ elif st.session_state.page == 'Verwaltung':
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Speichern", type="primary", use_container_width=True):
+    if st.button("💾 Speichern", type="primary", use_container_width=True): # Primary Button
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
@@ -403,7 +390,7 @@ elif st.session_state.page == 'Verwaltung':
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']): st.image(curr['bild_pfad'], width=150)
         up = st.file_uploader("Foto", type=['jpg','png'])
-        if st.button("Foto speichern", type="primary", use_container_width=True):
+        if st.button("Foto speichern", type="primary", use_container_width=True): # Primary Button
             if up:
                 np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
@@ -434,7 +421,7 @@ elif st.session_state.page == 'Neuer Eintrag':
         typ = c_typ.selectbox("Typ", ["Dialog Display", "Ohne"])
         letzte_kontrolle = c_dat.date_input("Datum", datetime.date.today())
         
-        if st.form_submit_button("Speichern", type="primary", use_container_width=True):
+        if st.form_submit_button("Speichern", type="primary", use_container_width=True): # Primary Button
             final_lat, final_lon = 0.0, 0.0
             new_id = pd.Timestamp.now().strftime('%Y%m%d%H%M%S')
             img_path = save_uploaded_image(uploaded_img, new_id) if uploaded_img else ""
