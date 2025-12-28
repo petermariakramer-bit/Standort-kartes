@@ -63,94 +63,119 @@ st.markdown("""
     }
     
     header {visibility: hidden;}
-    .block-container { padding-top: 1rem !important; max-width: 100% !important; padding-left: 1rem; padding-right: 1rem; }
+    /* Weniger Padding oben für App-Feeling */
+    .block-container { padding-top: 0.5rem !important; max-width: 100% !important; padding-left: 1rem; padding-right: 1rem; }
 
     /* 2. HEADER & TITEL */
     .app-title {
-        font-size: 24px; font-weight: 700; color: #1d1d1f;
-        margin: 0; line-height: 1.5; white-space: nowrap;
+        font-size: 22px; font-weight: 700; color: #1d1d1f;
+        margin: 0; line-height: 2.5rem; white-space: nowrap;
     }
 
-    /* 3. LISTE STYLING */
+    /* 3. NAVIGATION ICONS (RECHTS OBEN) */
+    /* Wir machen die Buttons transparent und groß */
+    div[data-testid="stHorizontalBlock"] button {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0px !important;
+        margin: 0px !important;
+        font-size: 20px !important; /* Icon Größe */
+        line-height: 1 !important;
+        min-height: 0px !important;
+    }
+    div[data-testid="stHorizontalBlock"] button:hover {
+        color: #0071e3 !important;
+        background-color: transparent !important;
+    }
+    /* Das aktive Icon blau färben */
+    button[kind="primary"] span {
+        color: #0071e3 !important;
+    }
+
+    /* 4. LISTE STYLING MIT TRENNLINIEN */
+    /* Container für einen Listeneintrag */
+    .list-entry-container {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #d1d1d6; /* Deutliche Trennlinie (iOS Grau) */
+    }
+
+    /* Button Text Links */
     div[data-testid="stVerticalBlock"] .stButton button {
         width: 100%; background-color: transparent; color: #0071e3; border: none;
         text-align: left !important; justify-content: flex-start !important; 
         padding-left: 0px !important; font-weight: 600 !important;
-        font-size: 16px !important; margin: 0px !important; height: auto !important;
+        font-size: 17px !important; margin: 0px !important; height: auto !important;
         box-shadow: none !important;
-    }
-    div[data-testid="stVerticalBlock"] .stButton button:hover {
-        color: #005bb5; text-decoration: none;
     }
     
     .address-text {
         font-size: 13px; color: #86868b !important; 
-        margin-top: -4px; margin-bottom: 0px; padding-left: 0px; line-height: 1.4; 
+        margin-top: -2px; line-height: 1.4; 
     }
     
     /* Bild in der Liste */
     div[data-testid="stImage"] img {
-        border-radius: 8px; object-fit: cover; height: 60px !important; width: 100% !important;
+        border-radius: 8px; object-fit: cover; height: 55px !important; width: 100% !important;
     }
 
-    /* 4. SEGMENTED CONTROL (Liste/Karte Switcher) */
+    /* 5. SEGMENTED CONTROL */
     div.row-widget.stRadio > div {
-        flex-direction: row; background-color: #f5f5f7; padding: 4px;
-        border-radius: 10px; width: 100%; justify-content: center;
+        flex-direction: row; background-color: #f2f2f7; padding: 3px;
+        border-radius: 9px; width: 100%; justify-content: center; margin-top: 10px;
     }
     div.row-widget.stRadio > div > label {
-        background-color: transparent; border: none; padding: 6px 20px;
-        border-radius: 8px; margin-right: 0px; width: 50%; text-align: center;
+        background-color: transparent; border: none; padding: 5px 10px;
+        border-radius: 7px; margin: 0; width: 50%; text-align: center;
         justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
     }
     div.row-widget.stRadio > div > label[data-checked="true"] {
         background-color: #ffffff; color: #000 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
-    
-    /* 5. BUTTONS */
-    button[kind="primary"] {
-        background-color: #0071e3 !important; color: white !important;
-        border: none !important; border-radius: 8px !important;
-    }
-    button[kind="secondary"] {
-        background-color: #f5f5f7 !important; color: #1d1d1f !important;
-        border: none !important; border-radius: 8px !important;
-    }
+
+    /* Ausrichtung fixen */
+    div[data-testid="column"] { align-items: center; display: flex; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- NAVIGATION ---
-c_brand, c_nav1, c_nav2, c_nav3, c_spacer = st.columns([2, 1, 1, 1.3, 4])
+# --- NAVIGATION (NEU: ICONS RECHTS) ---
+# Layout: [Titel (groß), Spacer, Icon1, Icon2, Icon3]
+# Wir geben dem Titel viel Platz (6), dann spacer (3), dann kleine Slots für Icons (1)
+c_title, c_space, c_home, c_manage, c_add = st.columns([6, 2, 1, 1, 1])
 
-with c_brand:
+with c_title:
     st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 
-with c_nav1:
+# Icon 1: Übersicht (Haus)
+with c_home:
     btn_type = "primary" if st.session_state.page == "Übersicht" else "secondary"
-    if st.button("Übersicht", type=btn_type, use_container_width=True):
+    # Wir nutzen Emojis als Icons. Alternativ könnte man Material Icons via Markdown nutzen.
+    if st.button("🏠", type=btn_type, help="Übersicht", use_container_width=True):
         set_page("Übersicht"); st.rerun()
 
-with c_nav2:
+# Icon 2: Verwaltung (Zahnrad oder Liste)
+with c_manage:
     btn_type = "primary" if st.session_state.page == "Verwaltung" else "secondary"
-    if st.button("Verwaltung", type=btn_type, use_container_width=True):
+    if st.button("⚙️", type=btn_type, help="Verwaltung", use_container_width=True):
         set_page("Verwaltung"); st.rerun()
 
-with c_nav3:
+# Icon 3: Neuer Eintrag (Plus)
+with c_add:
     btn_type = "primary" if st.session_state.page == "Neuer Eintrag" else "secondary"
-    if st.button("Neuer Eintrag", type=btn_type, use_container_width=True):
+    if st.button("➕", type=btn_type, help="Neuer Eintrag", use_container_width=True):
         set_page("Neuer Eintrag"); st.rerun()
 
-st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 15px; margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+# Feine Linie unter dem Header
+st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 10px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_final_v4")
+geolocator = Nominatim(user_agent="dialog_app_v5_icons")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
-    # HIER SIND DIE NEUEN SPALTEN: 'baujahr', 'hersteller'
     cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad", "baujahr", "hersteller"]
     
     if not os.path.exists(CSV_FILE):
@@ -182,7 +207,7 @@ if st.session_state.page == 'Übersicht':
     
     # --- DETAIL ANSICHT ---
     if st.session_state.detail_id is not None:
-        if st.button("← Zurück zur Übersicht", type="secondary"):
+        if st.button("← Zurück", type="secondary"):
             st.session_state.detail_id = None
             st.rerun()
             
@@ -196,42 +221,46 @@ if st.session_state.page == 'Übersicht':
             
         st.markdown("---")
         
-        # DETAILS ANZEIGEN
         c_det1, c_det2 = st.columns(2)
         with c_det1:
             st.markdown(f"**Typ:** {entry['typ']}")
-            st.markdown(f"**Hersteller:** {entry['hersteller']}") # NEU
-            st.markdown(f"**Baujahr:** {entry['baujahr']}")       # NEU
+            st.markdown(f"**Hersteller:** {entry['hersteller']}")
+            st.markdown(f"**Baujahr:** {entry['baujahr']}")
         with c_det2:
-            st.markdown(f"**Letzte Kontrolle:** {entry['letzte_kontrolle']}")
-            st.markdown(f"**Koordinaten:** {float(entry['breitengrad']):.5f}, {float(entry['laengengrad']):.5f}")
-
+            st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
+            
         if entry['breitengrad'] != 0:
-            st.markdown("### Standort auf Karte")
+            st.markdown("### Karte")
             m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
             folium.Marker(
                 [entry['breitengrad'], entry['laengengrad']],
                 icon=folium.Icon(color="blue", icon="info-sign")
             ).add_to(m_detail)
-            st_folium(m_detail, width="100%", height=300)
+            st_folium(m_detail, width="100%", height=250)
 
-    # --- NORMALE ANSICHT (Liste / Karte) ---
+    # --- LISTE / KARTE ---
     else:
-        mode = st.radio("Ansicht wählen", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
-        st.markdown("<br>", unsafe_allow_html=True)
-
+        mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
+        
         if mode == "Liste":
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 
-                for _, row in df_display.iterrows():
-                    with st.container():
-                        c_text, c_img = st.columns([3, 1])
+                # Container für die Liste
+                with st.container():
+                    for _, row in df_display.iterrows():
                         
-                        with c_text:
+                        # --- EIN LISTENEINTRAG ---
+                        # Wir nutzen Columns für das Layout (Text links, Bild rechts)
+                        # Das CSS .list-entry-container sorgt für die Linie unten
+                        
+                        col_content, col_img = st.columns([3.5, 1])
+                        
+                        with col_content:
                             label_header = f"{row['nummer']} - {row['bundesnummer']}"
                             if label_header.strip() in ["-", " - "]: label_header = "Ohne Nummer"
 
+                            # Der Name ist der Button
                             if st.button(label_header, key=f"list_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -240,13 +269,16 @@ if st.session_state.page == 'Übersicht':
                             plz_ort = f"{row['plz']} {row['stadt']}".strip()
                             st.markdown(f"<div class='address-text'>{strasse}<br>{plz_ort}</div>", unsafe_allow_html=True)
                         
-                        with c_img:
+                        with col_img:
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 st.image(row['bild_pfad'], use_container_width=True)
                         
-                        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+                        # Die Trennlinie wird nun hier eingefügt, aber wir nutzen besser 
+                        # eine CSS Klasse im Loop oder einfach eine HR
+                        st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 10px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
             else:
-                st.info("Keine Einträge vorhanden.")
+                st.info("Keine Einträge.")
 
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
@@ -256,10 +288,7 @@ if st.session_state.page == 'Übersicht':
                 if not valid_coords.empty:
                     sw = valid_coords[['breitengrad', 'laengengrad']].min().values.tolist()
                     ne = valid_coords[['breitengrad', 'laengengrad']].max().values.tolist()
-                    if sw == ne:
-                        m = folium.Map(location=sw, zoom_start=14, tiles="OpenStreetMap")
-                    else:
-                        m.fit_bounds([sw, ne])
+                    if sw != ne: m.fit_bounds([sw, ne])
 
             for _, row in df.iterrows():
                 if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
@@ -272,7 +301,7 @@ if st.session_state.page == 'Übersicht':
                             img_html = f'<img src="data:image/jpeg;base64,{b64_str}" style="width:100%; border-radius:8px; margin-bottom:10px;">'
                     
                     popup_content = f"""
-                    <div style="font-family:-apple-system, sans-serif; width:200px;">
+                    <div style="font-family:-apple-system, sans-serif; width:180px;">
                         {img_html}
                         <b>{row['nummer']}</b><br>{row['strasse']}
                     </div>
@@ -287,7 +316,6 @@ if st.session_state.page == 'Übersicht':
 
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
-    st.caption("Daten editieren & löschen")
     
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
@@ -297,21 +325,18 @@ elif st.session_state.page == 'Verwaltung':
         "id": None, "bild_pfad": None,
         "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
         "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
-        "strasse": st.column_config.TextColumn("Straße"), "plz": st.column_config.TextColumn("PLZ"), 
-        "stadt": st.column_config.TextColumn("Stadt"), "nummer": st.column_config.TextColumn("Nr."),
-        "bundesnummer": st.column_config.TextColumn("B-Nr."),
-        # NEUE SPALTEN IN DER TABELLE
-        "hersteller": st.column_config.TextColumn("Hersteller"),
-        "baujahr": st.column_config.TextColumn("Baujahr"),
-        "breitengrad": st.column_config.NumberColumn("Lat", format="%.5f"),
-        "laengengrad": st.column_config.NumberColumn("Lon", format="%.5f")
+        "strasse": st.column_config.TextColumn("Str"), "plz": st.column_config.TextColumn("PLZ"), 
+        "stadt": st.column_config.TextColumn("Ort"), "nummer": st.column_config.TextColumn("Nr."),
+        "bundesnummer": st.column_config.TextColumn("B-Nr"),
+        "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
+        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
     }
 
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
 
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("Speichern", type="primary"):
+    if st.button("💾 Speichern", type="primary"):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         final_df = rows_to_keep.drop(columns=["Löschen?"])
         save_data(final_df)
@@ -329,7 +354,7 @@ elif st.session_state.page == 'Verwaltung':
         
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']):
-            st.image(curr['bild_pfad'], width=200)
+            st.image(curr['bild_pfad'], width=150)
             
         up = st.file_uploader("Bild ändern", type=['jpg','png'])
         if st.button("Bild speichern"):
@@ -349,14 +374,11 @@ elif st.session_state.page == 'Neuer Eintrag':
         nummer = c1.text_input("Nummer")
         bundesnummer = c2.text_input("Bundesnummer")
         
-        st.markdown("---")
         col_str, col_plz, col_stadt = st.columns([2, 1, 1])
         strasse = col_str.text_input("Straße", placeholder="Heerstr. 12")
         plz = col_plz.text_input("PLZ", placeholder="10115")
         stadt = col_stadt.text_input("Stadt", placeholder="Berlin")
         
-        # NEUE EINGABEFELDER
-        st.markdown("---")
         c_her, c_bau = st.columns(2)
         hersteller = c_her.text_input("Hersteller")
         baujahr = c_bau.text_input("Baujahr")
