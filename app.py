@@ -9,7 +9,13 @@ import datetime
 import base64
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Dialog Displays", layout="wide", page_icon="")
+# "initial_sidebar_state='collapsed'" sorgt dafür, dass das Menü auf dem Handy zu ist
+st.set_page_config(
+    page_title="Dialog Displays", 
+    layout="wide", 
+    page_icon="",
+    initial_sidebar_state="collapsed" 
+)
 
 # --- SESSION STATE ---
 if 'page' not in st.session_state:
@@ -21,10 +27,6 @@ if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 5
 
 if 'detail_id' not in st.session_state:
-    st.session_state.detail_id = None
-
-def set_page(page_name):
-    st.session_state.page = page_name
     st.session_state.detail_id = None
 
 def set_map_focus(lat, lon):
@@ -61,10 +63,12 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header ausblenden (Streamlit Standard Header) */
-    header {visibility: hidden;}
+    /* Header (der Streamlit Balken) ausblenden, aber den Toggle lassen */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
     
-    /* WICHTIG: Padding oben, damit unser Menü sichtbar ist */
+    /* Inhalt etwas nach oben rücken */
     .block-container { 
         padding-top: 2rem !important; 
         padding-left: 1rem !important; 
@@ -72,40 +76,16 @@ st.markdown("""
         max-width: 100% !important; 
     }
 
-    /* 2. MOBILE LAYOUT FIX */
-    /* Zwingt Spalten (Columns) dazu, nebeneinander zu bleiben (nicht stapeln!) */
-    div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        white-space: nowrap !important;
-    }
-
-    /* 3. TITEL */
+    /* 2. TITEL */
     .app-title {
-        font-size: 22px; 
+        font-size: 26px; 
         font-weight: 700; 
         color: #000000 !important;
-        margin: 0;
+        margin-bottom: 5px;
         white-space: nowrap;
     }
 
-    /* 4. NAVIGATION ICONS */
-    /* Container für die Buttons, damit sie zentriert sind */
-    div.stButton > button {
-        width: 100%;
-        border: none;
-        background: transparent;
-        box-shadow: none;
-    }
-    
-    /* Icons größer machen */
-    .nav-icon {
-        font-size: 24px;
-        text-align: center;
-        cursor: pointer;
-    }
-
-    /* 5. LISTE & DETAILS */
+    /* 3. LISTE & DETAILS */
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
@@ -114,7 +94,7 @@ st.markdown("""
     /* Trennlinie */
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* 6. SEGMENTED CONTROL (Liste/Karte) */
+    /* 4. SEGMENTED CONTROL (Liste/Karte) */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
@@ -128,42 +108,44 @@ st.markdown("""
         background-color: #ffffff; color: #000 !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
+    
+    /* 5. SIDEBAR STYLING */
+    section[data-testid="stSidebar"] {
+        background-color: #fbfbfd; /* Apple Sidebar Grau */
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- HEADER NAVIGATION (Robust) ---
-# Wir platzieren das Menü direkt am Anfang der Seite ohne Sticky-Tricks.
 
-# Layout: Titel (Links) | Platzhalter | Home | Verwaltung | Neu
-# [5, 1, 1, 1, 1] Verhältnis
-col_head = st.columns([5, 0.5, 1, 1, 1])
-
-with col_head[0]:
-    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
-
-# Icons als Buttons. Wir nutzen Emoji-Buttons, weil die am stabilsten sind.
-with col_head[2]:
-    if st.button("🏠", key="nav_home", use_container_width=True):
-        set_page("Übersicht")
+# --- NAVIGATION (SIDEBAR) ---
+# Das ist das "ausklappbare Menü"
+with st.sidebar:
+    st.markdown("### Menü")
+    # Wir nutzen Radio Buttons für die Navigation, das ist sehr stabil
+    selected_page = st.radio(
+        "Navigation", 
+        ["Übersicht", "Verwaltung", "Neuer Eintrag"],
+        label_visibility="collapsed"
+    )
+    
+    # State update nur wenn sich was ändert
+    if selected_page != st.session_state.page:
+        st.session_state.page = selected_page
+        st.session_state.detail_id = None # Detail resetten
         st.rerun()
+        
+    st.markdown("---")
+    st.caption("Dialog Displays App v1.0")
 
-with col_head[3]:
-    if st.button("⚙️", key="nav_manage", use_container_width=True):
-        set_page("Verwaltung")
-        st.rerun()
 
-with col_head[4]:
-    if st.button("➕", key="nav_add", use_container_width=True):
-        set_page("Neuer Eintrag")
-        st.rerun()
-
-# Trennlinie unter dem Header
-st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 10px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+# --- HEADER (HAUPTBEREICH) ---
+st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
+st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_mobile_final_fix")
+geolocator = Nominatim(user_agent="dialog_app_sidebar_v1")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
@@ -241,7 +223,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Der Name ist der Button
+                            # Button mit CSS Styling für Link-Look
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
