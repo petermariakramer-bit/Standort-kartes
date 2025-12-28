@@ -10,9 +10,9 @@ import base64
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="Dialog Displays", 
+    page_title="Berlin Lichtenberg", 
     layout="wide", 
-    page_icon="",
+    page_icon="🐻",
     initial_sidebar_state="collapsed"
 )
 
@@ -24,9 +24,9 @@ if 'menu_open' not in st.session_state:
     st.session_state.menu_open = False
 
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [51.16, 10.45] 
+    st.session_state.map_center = [52.51, 13.48] 
 if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = 5
+    st.session_state.map_zoom = 12
 
 if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
@@ -34,14 +34,10 @@ if 'detail_id' not in st.session_state:
 def set_page(page_name):
     st.session_state.page = page_name
     st.session_state.detail_id = None
-    st.session_state.menu_open = False # Menü schließen nach Auswahl
+    st.session_state.menu_open = False 
 
 def toggle_menu():
     st.session_state.menu_open = not st.session_state.menu_open
-
-def set_map_focus(lat, lon):
-    st.session_state.map_center = [lat, lon]
-    st.session_state.map_zoom = 15
 
 # --- HELPER ---
 DATA_FOLDER = 'data'
@@ -63,7 +59,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN ---
+# --- CSS DESIGN (REPARIERT) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
@@ -77,7 +73,7 @@ st.markdown("""
     header {visibility: hidden;}
     
     .block-container { 
-        padding-top: 1rem !important; 
+        padding-top: 2rem !important; 
         padding-left: 1rem !important; 
         padding-right: 1rem !important; 
         max-width: 100% !important; 
@@ -85,22 +81,18 @@ st.markdown("""
 
     /* 2. TITEL */
     .app-title {
-        font-size: 24px; 
+        font-size: 26px; 
         font-weight: 700; 
         color: #000000 !important;
-        margin-bottom: 0px;
+        margin: 0;
         white-space: nowrap;
-        padding-top: 5px;
     }
 
-    /* 3. MENÜ BUTTON */
-    div.stButton > button {
-        border: none;
-        background: transparent;
-        box-shadow: none;
-    }
-    div.stButton > button:hover {
-        background: #f5f5f7;
+    /* 3. MENÜ BUTTON (Kein Globales Button-Styling mehr!) */
+    /* Wir stylen Buttons nur sanft, damit die Liste nicht kaputt geht */
+    button:hover {
+        border-color: #0071e3 !important;
+        color: #0071e3 !important;
     }
 
     /* 4. MENÜ CONTAINER */
@@ -108,32 +100,53 @@ st.markdown("""
         background-color: #fbfbfd;
         border-radius: 12px;
         padding: 15px;
+        margin-top: 10px;
         margin-bottom: 20px;
         border: 1px solid #e5e5ea;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
+    
+    /* Die Buttons IM Menü sollen wie Links aussehen */
+    .menu-box button {
+        text-align: left !important;
+        width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        font-size: 18px !important;
+        padding: 10px !important;
+    }
+    .menu-box button:hover {
+        background-color: #f0f0f5 !important;
+        border-radius: 8px !important;
+    }
 
-    /* 5. LISTE & DETAILS */
+    /* 5. LISTE STYLING */
+    /* Hier sorgen wir dafür, dass die Liste sauber aussieht */
+    .list-item-container {
+        padding: 10px 0;
+    }
+    
+    /* Listen-Buttons linksbündig und sauber */
+    div[data-testid="column"] button {
+        text-align: left !important;
+        border: none !important;
+        background: transparent !important;
+        padding-left: 0 !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        box-shadow: none !important;
+    }
+
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
     }
-    
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* Segmented Control (Radio) */
+    /* Segmented Control Fix */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
-    }
-    div.row-widget.stRadio > div > label {
-        background-color: transparent; border: none; padding: 5px 0px;
-        border-radius: 7px; margin: 0; width: 50%; text-align: center;
-        justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
-    }
-    div.row-widget.stRadio > div > label[data-checked="true"] {
-        background-color: #ffffff; color: #000 !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
     
     section[data-testid="stSidebar"] { display: none; }
@@ -142,14 +155,17 @@ st.markdown("""
 
 
 # --- HEADER & NAVIGATION ---
-c_head_title, c_head_btn = st.columns([6, 1])
+# Layout: Titel (groß) | Button (klein, rechts)
+c_head_title, c_head_btn = st.columns([7, 1])
 
 with c_head_title:
-    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 
 with c_head_btn:
-    btn_label = "✖️" if st.session_state.menu_open else "☰"
-    if st.button(btn_label, key="menu_toggle", use_container_width=True):
+    # Toggle Button
+    icon = "✖️" if st.session_state.menu_open else "☰"
+    # Wir geben dem Button einen eindeutigen Key, aber verlassen uns aufs Standard-Styling
+    if st.button(icon, key="menu_toggle"):
         toggle_menu()
         st.rerun()
 
@@ -157,16 +173,10 @@ with c_head_btn:
 if st.session_state.menu_open:
     with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-        st.caption("Navigation")
-        
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1:
-            if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
-        with c_m2:
-            if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
-        with c_m3:
-            if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-            
+        # Menüpunkte
+        if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
+        if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
+        if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -175,8 +185,8 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_importer")
-geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5) # Etwas langsamer für Sicherheit beim Import
+geolocator = Nominatim(user_agent="berlin_app_fix_list")
+geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
     cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad", "baujahr", "hersteller"]
@@ -203,13 +213,14 @@ def save_data(df):
 
 df = load_data()
 
+
 # --- CONTENT ---
 
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL ANSICHT
-        if st.button("← Zurück", type="secondary", use_container_width=True):
+        if st.button("← Zurück", key="back_btn", use_container_width=True):
             st.session_state.detail_id = None
             st.rerun()
             
@@ -245,14 +256,15 @@ if st.session_state.page == 'Übersicht':
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
-                    # LISTENEINTRAG
                     with st.container():
+                        # Wir nutzen hier Columns, um Layout zu erzwingen
                         col_txt, col_img = st.columns([3.5, 1])
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
+                            # Klickbarer Name
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -271,7 +283,7 @@ if st.session_state.page == 'Übersicht':
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             
-            if st.session_state.map_zoom == 5 and not df.empty:
+            if st.session_state.map_zoom == 12 and not df.empty:
                 valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
                 if not valid.empty:
                     sw = valid[['breitengrad', 'laengengrad']].min().values.tolist()
@@ -294,104 +306,61 @@ if st.session_state.page == 'Übersicht':
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
-    # IMPORT SECTION (NEU)
+    # IMPORT
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
-        st.info("Lade eine Tabelle hoch (.ods oder .xlsx). Die Spalten werden automatisch erkannt.")
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
-        
         if uploaded_file and st.button("Import starten"):
             try:
-                # 1. Datei lesen
-                if uploaded_file.name.endswith(".csv"):
-                    df_new = pd.read_csv(uploaded_file)
-                elif uploaded_file.name.endswith(".ods"):
-                    df_new = pd.read_excel(uploaded_file, engine="odf")
-                else:
-                    df_new = pd.read_excel(uploaded_file)
+                if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
+                elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
+                else: df_new = pd.read_excel(uploaded_file)
                 
-                # 2. Spalten finden (Case-Insensitive Suche)
-                # Wir suchen nach Schlüsselwörtern in den Spaltennamen der hochgeladenen Datei
                 file_cols = [c.lower() for c in df_new.columns]
-                
-                # Mapping Helper
-                def get_col_data(keywords):
-                    for i, col_name in enumerate(file_cols):
-                        for kw in keywords:
-                            if kw in col_name:
-                                return df_new.iloc[:, i]
+                def get_col(kws):
+                    for i, c in enumerate(file_cols):
+                        for kw in kws:
+                            if kw in c: return df_new.iloc[:, i]
                     return None
 
-                # Daten extrahieren
-                import_nummer = get_col_data(["nummer", "nr.", "standort"])
-                import_bund = get_col_data(["bundes", "b-nr"])
-                import_str = get_col_data(["straße", "strasse", "adr"])
-                import_plz = get_col_data(["plz", "post"])
-                import_stadt = get_col_data(["stadt", "ort", "bezirk"])
-                import_baujahr = get_col_data(["baujahr", "jahr"])
-                import_hersteller = get_col_data(["hersteller", "firma"])
+                imp_nr = get_col(["nummer", "nr.", "standort"])
+                imp_b = get_col(["bundes", "b-nr"])
+                imp_s = get_col(["straße", "strasse", "adr"])
+                imp_plz = get_col(["plz", "post"])
+                imp_ort = get_col(["stadt", "ort", "bezirk"])
+                imp_bau = get_col(["baujahr", "jahr"])
+                imp_her = get_col(["hersteller", "firma"])
                 
-                count_imported = 0
-                progress_bar = st.progress(0)
-                
-                # 3. Daten in unsere Struktur überführen
+                count = 0
                 for idx in range(len(df_new)):
-                    new_id = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}" # Unique ID generieren
+                    nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
+                    v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
+                    v_b = str(imp_b.iloc[idx]) if imp_b is not None else ""
+                    v_s = str(imp_s.iloc[idx]) if imp_s is not None else ""
+                    v_p = str(imp_plz.iloc[idx]) if imp_plz is not None else ""
+                    v_o = str(imp_ort.iloc[idx]) if imp_ort is not None else "Berlin"
+                    v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
+                    v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
+                    if v_nr == "nan": v_nr = ""
                     
-                    val_nummer = str(import_nummer.iloc[idx]) if import_nummer is not None else ""
-                    val_bund = str(import_bund.iloc[idx]) if import_bund is not None else ""
-                    val_str = str(import_str.iloc[idx]) if import_str is not None else ""
-                    val_plz = str(import_plz.iloc[idx]) if import_plz is not None else ""
-                    val_stadt = str(import_stadt.iloc[idx]) if import_stadt is not None else "Berlin" # Default Berlin
-                    val_bau = str(import_baujahr.iloc[idx]) if import_baujahr is not None else ""
-                    val_her = str(import_hersteller.iloc[idx]) if import_hersteller is not None else ""
-                    
-                    # Cleanup strings
-                    if val_nummer == "nan": val_nummer = ""
-                    if val_bund == "nan": val_bund = ""
-                    
-                    # 4. Geocoding (Automatisch Koordinaten suchen)
                     lat, lon = 0.0, 0.0
-                    if val_str and val_stadt:
+                    if v_s and v_o:
                         try:
-                            address_query = f"{val_str}, {val_plz} {val_stadt}"
-                            loc = geocode(address_query)
-                            if loc:
-                                lat, lon = loc.latitude, loc.longitude
-                        except:
-                            pass
+                            loc = geocode(f"{v_s}, {v_p} {v_o}")
+                            if loc: lat, lon = loc.latitude, loc.longitude
+                        except: pass
                     
-                    # Row erstellen
-                    new_row = pd.DataFrame({
-                        "id": [new_id],
-                        "nummer": [val_nummer],
-                        "bundesnummer": [val_bund],
-                        "strasse": [val_str],
-                        "plz": [val_plz],
-                        "stadt": [val_stadt],
-                        "typ": ["Dialog Display"],
-                        "letzte_kontrolle": [datetime.date.today()],
-                        "breitengrad": [lat],
-                        "laengengrad": [lon],
-                        "bild_pfad": [""],
-                        "baujahr": [val_bau],
-                        "hersteller": [val_her]
-                    })
-                    
+                    new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her]})
                     df = pd.concat([df, new_row], ignore_index=True)
-                    count_imported += 1
-                    progress_bar.progress(min(idx / len(df_new), 1.0))
+                    count += 1
                 
                 save_data(df)
-                st.success(f"{count_imported} Einträge erfolgreich importiert!")
+                st.success(f"{count} Einträge importiert!")
                 st.rerun()
-                
-            except Exception as e:
-                st.error(f"Fehler beim Import: {e}")
-                st.info("Bitte stelle sicher, dass 'odfpy' installiert ist: pip install odfpy")
+            except Exception as e: st.error(f"Fehler: {e}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
     
-    # Tabelle Editor
+    # Editor
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
     column_cfg = {
@@ -403,14 +372,12 @@ elif st.session_state.page == 'Verwaltung':
         "stadt": st.column_config.TextColumn("Ort"), "nummer": st.column_config.TextColumn("Nr."),
         "bundesnummer": st.column_config.TextColumn("B-Nr"),
         "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
-        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f"),
-        "hersteller": st.column_config.TextColumn("Hersteller"),
-        "baujahr": st.column_config.TextColumn("Baujahr")
+        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
     }
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Tabelle speichern", type="primary", use_container_width=True):
+    if st.button("💾 Speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
@@ -422,19 +389,16 @@ elif st.session_state.page == 'Verwaltung':
         opts = {f"{r['nummer']}": r['id'] for i, r in df.sort_values('nummer').iterrows()}
         sel_label = st.selectbox("Eintrag:", opts.keys())
         sel_id = opts[sel_label]
-        
         curr = df[df['id'] == sel_id].iloc[0]
-        if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']):
-            st.image(curr['bild_pfad'], width=150)
-            
-        up = st.file_uploader("Neues Foto", type=['jpg','png'])
+        if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']): st.image(curr['bild_pfad'], width=150)
+        up = st.file_uploader("Foto", type=['jpg','png'])
         if st.button("Foto speichern", use_container_width=True):
             if up:
                 np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
                 df.at[idx, 'bild_pfad'] = np
                 save_data(df)
-                st.success("Foto gespeichert!")
+                st.success("Gespeichert!")
                 st.rerun()
 
 elif st.session_state.page == 'Neuer Eintrag':
@@ -450,14 +414,11 @@ elif st.session_state.page == 'Neuer Eintrag':
         c_her, c_bau = st.columns(2)
         hersteller = c_her.text_input("Hersteller")
         baujahr = c_bau.text_input("Baujahr")
-        
         uploaded_img = st.file_uploader("Foto", type=['png', 'jpg'])
-        
-        with st.expander("Koordinaten (Optional)"):
+        with st.expander("Koordinaten"):
             g1, g2 = st.columns(2)
             mlat = g1.number_input("Lat", value=0.0, format="%.5f")
             mlon = g2.number_input("Lon", value=0.0, format="%.5f")
-        
         c_typ, c_dat = st.columns(2)
         typ = c_typ.selectbox("Typ", ["Dialog Display", "Ohne"])
         letzte_kontrolle = c_dat.date_input("Datum", datetime.date.today())
@@ -466,20 +427,12 @@ elif st.session_state.page == 'Neuer Eintrag':
             final_lat, final_lon = 0.0, 0.0
             new_id = pd.Timestamp.now().strftime('%Y%m%d%H%M%S')
             img_path = save_uploaded_image(uploaded_img, new_id) if uploaded_img else ""
-
             if mlat != 0.0: final_lat, final_lon = mlat, mlon
             else:
                 try:
                     loc = geocode(f"{strasse}, {plz} {stadt}")
                     if loc: final_lat, final_lon = loc.latitude, loc.longitude
                 except: pass
-            
-            new_row = pd.DataFrame({
-                "id": [new_id], "nummer": [nummer], "bundesnummer": [bundesnummer], 
-                "strasse": [strasse], "plz": [plz], "stadt": [stadt],
-                "typ": [typ], "letzte_kontrolle": [letzte_kontrolle],
-                "breitengrad": [final_lat], "laengengrad": [final_lon], "bild_pfad": [img_path],
-                "hersteller": [hersteller], "baujahr": [baujahr]
-            })
+            new_row = pd.DataFrame({"id": [new_id], "nummer": [nummer], "bundesnummer": [bundesnummer], "strasse": [strasse], "plz": [plz], "stadt": [stadt], "typ": [typ], "letzte_kontrolle": [letzte_kontrolle], "breitengrad": [final_lat], "laengengrad": [final_lon], "bild_pfad": [img_path], "hersteller": [hersteller], "baujahr": [baujahr]})
             save_data(pd.concat([df, new_row], ignore_index=True))
             st.success("Gespeichert!")
