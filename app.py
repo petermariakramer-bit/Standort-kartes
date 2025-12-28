@@ -7,7 +7,6 @@ from geopy.extra.rate_limiter import RateLimiter
 import os
 import datetime
 import base64
-from PIL import Image
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Dialog Displays", layout="wide", page_icon="")
@@ -21,18 +20,13 @@ if 'map_center' not in st.session_state:
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 5
 
-# State für die Detail-Ansicht (welcher Eintrag ist offen?)
+# State für Detail-Ansicht
 if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
 
-# State für den Ansichts-Modus (Liste oder Karte)
-if 'view_mode' not in st.session_state:
-    st.session_state.view_mode = "Liste"
-
 def set_page(page_name):
     st.session_state.page = page_name
-    # Beim Seitenwechsel Details zurücksetzen
-    st.session_state.detail_id = None
+    st.session_state.detail_id = None # Details resetten bei Seitenwechsel
 
 def set_map_focus(lat, lon):
     st.session_state.map_center = [lat, lon]
@@ -77,23 +71,7 @@ st.markdown("""
         margin: 0; line-height: 1.5; white-space: nowrap;
     }
 
-    div[data-testid="stHorizontalBlock"] button {
-        white-space: nowrap !important; height: auto !important;
-        padding-top: 8px !important; padding-bottom: 8px !important; margin-top: 0px !important;
-    }
-    
-    /* Navigation Ausrichtung */
-    div[data-testid="column"] {
-        display: flex; align-items: center !important; justify-content: flex-start;
-    }
-
-    /* 3. LISTE STYLING (Card Look) */
-    .list-item-container {
-        border-bottom: 1px solid #f0f0f0;
-        padding: 15px 0;
-    }
-
-    /* Buttons in der Liste (Transparent & Linksbündig) */
+    /* 3. LISTE STYLING */
     div[data-testid="stVerticalBlock"] .stButton button {
         width: 100%; background-color: transparent; color: #0071e3; border: none;
         text-align: left !important; justify-content: flex-start !important; 
@@ -116,34 +94,18 @@ st.markdown("""
     }
 
     /* 4. SEGMENTED CONTROL (Liste/Karte Switcher) */
-    /* Wir stylen die Radio Buttons um, damit sie wie Tabs aussehen */
     div.row-widget.stRadio > div {
-        flex-direction: row;
-        background-color: #f5f5f7;
-        padding: 4px;
-        border-radius: 10px;
-        width: 100%;
-        justify-content: center;
+        flex-direction: row; background-color: #f5f5f7; padding: 4px;
+        border-radius: 10px; width: 100%; justify-content: center;
     }
     div.row-widget.stRadio > div > label {
-        background-color: transparent;
-        border: none;
-        padding: 6px 20px;
-        border-radius: 8px;
-        margin-right: 0px;
-        width: 50%;
-        text-align: center;
-        justify-content: center;
-        cursor: pointer;
-        font-weight: 500;
-        color: #666 !important;
+        background-color: transparent; border: none; padding: 6px 20px;
+        border-radius: 8px; margin-right: 0px; width: 50%; text-align: center;
+        justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
     }
-    /* Das ausgewählte Element */
     div.row-widget.stRadio > div > label[data-checked="true"] {
-        background-color: #ffffff;
-        color: #000 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        font-weight: 600;
+        background-color: #ffffff; color: #000 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600;
     }
     
     /* 5. BUTTONS */
@@ -184,7 +146,7 @@ st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 15p
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_mobile")
+geolocator = Nominatim(user_agent="dialog_app_mobile_v2")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
@@ -217,26 +179,22 @@ df = load_data()
 
 if st.session_state.page == 'Übersicht':
     
-    # --- 1. DETAIL ANSICHT (Wenn ein Eintrag ausgewählt wurde) ---
+    # --- DETAIL ANSICHT ---
     if st.session_state.detail_id is not None:
-        # Button "Zurück zur Liste"
         if st.button("← Zurück zur Übersicht", type="secondary"):
             st.session_state.detail_id = None
             st.rerun()
             
-        # Daten des gewählten Eintrags holen
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
-        # Grosses Bild
         if entry['bild_pfad'] and os.path.exists(entry['bild_pfad']):
             st.image(entry['bild_pfad'], use_container_width=True)
             
         st.markdown("---")
         
-        # Details
         c_det1, c_det2 = st.columns(2)
         with c_det1:
             st.markdown(f"**Typ:** {entry['typ']}")
@@ -244,7 +202,6 @@ if st.session_state.page == 'Übersicht':
         with c_det2:
             st.markdown(f"**Koordinaten:** {float(entry['breitengrad']):.5f}, {float(entry['laengengrad']):.5f}")
 
-        # Mini-Map nur für diesen Standort
         if entry['breitengrad'] != 0:
             st.markdown("### Standort auf Karte")
             m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
@@ -254,22 +211,16 @@ if st.session_state.page == 'Übersicht':
             ).add_to(m_detail)
             st_folium(m_detail, width="100%", height=300)
 
-    # --- 2. NORMALE ANSICHT (Liste oder Karte) ---
+    # --- NORMALE ANSICHT (Liste / Karte) ---
     else:
-        # UMSCHALTER: LISTE vs KARTE
-        # Wir nutzen Radio Buttons, aber durch CSS sieht es aus wie ein Tab-Switcher
         mode = st.radio("Ansicht wählen", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
-        
         st.markdown("<br>", unsafe_allow_html=True)
 
         if mode == "Liste":
-            # --- LISTE ANZEIGEN ---
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 
                 for _, row in df_display.iterrows():
-                    
-                    # Container Styling via CSS (simuliert)
                     with st.container():
                         c_text, c_img = st.columns([3, 1])
                         
@@ -277,14 +228,12 @@ if st.session_state.page == 'Übersicht':
                             label_header = f"{row['nummer']} - {row['bundesnummer']}"
                             if label_header.strip() in ["-", " - "]: label_header = "Ohne Nummer"
 
-                            # WICHTIG: Beim Klick setzen wir die detail_id
                             if st.button(label_header, key=f"list_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
                             
                             strasse = row['strasse'] if row['strasse'] else ""
                             plz_ort = f"{row['plz']} {row['stadt']}".strip()
-                            
                             st.markdown(f"<div class='address-text'>{strasse}<br>{plz_ort}</div>", unsafe_allow_html=True)
                         
                         with c_img:
@@ -296,10 +245,8 @@ if st.session_state.page == 'Übersicht':
                 st.info("Keine Einträge vorhanden.")
 
         elif mode == "Karte":
-            # --- KARTE ANZEIGEN ---
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             
-            # Auto-Zoom beim ersten Laden der Karte
             if st.session_state.map_zoom == 5 and not df.empty:
                 valid_coords = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
                 if not valid_coords.empty:
@@ -314,7 +261,6 @@ if st.session_state.page == 'Übersicht':
                 if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
                     c = "blue" if row['typ'] == "Dialog Display" else "gray"
                     
-                    # Popup Bild
                     img_html = ""
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                         b64_str = get_image_base64(row['bild_pfad'])
@@ -333,12 +279,10 @@ if st.session_state.page == 'Übersicht':
                         icon=folium.Icon(color=c, icon="info-sign")
                     ).add_to(m)
             
-            # Karte über volle Breite und Höhe (für Mobile wichtig)
             st_folium(m, width="100%", height=600)
 
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
-    
     st.caption("Daten editieren & löschen")
     
     edit_data = df.copy()
