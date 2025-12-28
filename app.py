@@ -146,7 +146,7 @@ st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 15p
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_mobile_v2")
+geolocator = Nominatim(user_agent="dialog_app_mobile_v3")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
