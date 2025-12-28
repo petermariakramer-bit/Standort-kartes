@@ -59,13 +59,13 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (AGGRESSIVE FIX) ---
+# --- CSS DESIGN (IPHONE FORCE FIX) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
     .stApp { background-color: #ffffff !important; }
     html, body, p, div, label, h1, h2, h3, .stMarkdown, span {
-        color: #1d1d1f !important;
+        color: #000000 !important;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
@@ -78,45 +78,47 @@ st.markdown("""
         max-width: 100% !important; 
     }
 
-    /* 2. BUTTON RESET (DAS WICHTIGSTE!) */
-    /* Wir zielen auf ALLE Buttons, die NICHT "primary" (rot/blau) sind */
+    /* 2. AGGRESSIVER BUTTON FIX (IPHONE) */
+    /* Wir müssen -webkit-appearance nutzen, um das iPhone Design zu überschreiben */
+    
     button:not([kind="primary"]) {
+        background: transparent !important;
         background-color: transparent !important;
         border: none !important;
-        color: #000000 !important; /* Erzwingt Schwarz */
-        box-shadow: none !important;
-        text-shadow: none !important;
-        padding: 0px !important;
-    }
-    
-    /* Speziell für die divs, die den Button halten */
-    div.stButton > button:not([kind="primary"]) {
-        background: transparent !important;
-        border: 0px solid transparent !important;
-        color: #000000 !important;
-    }
-    
-    /* Hover Effekt leicht grau, aber kein schwarzer Block */
-    div.stButton > button:not([kind="primary"]):hover {
-        color: #0071e3 !important;
-        background-color: #ffffff !important;
-    }
-    
-    /* Active/Focus state resetten */
-    div.stButton > button:not([kind="primary"]):active, 
-    div.stButton > button:not([kind="primary"]):focus {
-        background-color: transparent !important;
         color: #000000 !important;
         box-shadow: none !important;
+        
+        /* Das hier verhindert das graue Kästchen auf dem iPhone: */
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
     }
 
-    /* 3. PRIMARY BUTTONS (Speichern etc. sollen sichtbar bleiben) */
+    /* Auch der Container muss transparent sein */
+    div.stButton > button:not([kind="primary"]) {
+        background-color: transparent !important;
+        border: 0px !important;
+    }
+
+    /* Hover und Focus States müssen auch transparent bleiben */
+    button:not([kind="primary"]):hover,
+    button:not([kind="primary"]):active,
+    button:not([kind="primary"]):focus,
+    button:not([kind="primary"]):visited {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #0071e3 !important; /* Blau beim Klicken */
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* 3. PRIMARY BUTTONS (Bleiben wie sie sind) */
     button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
         border-radius: 8px !important;
         padding: 10px 20px !important;
-        border: none !important;
+        -webkit-appearance: none !important; /* Auch hier wichtig für saubere Ränder */
     }
 
     /* 4. TITEL */
@@ -124,12 +126,11 @@ st.markdown("""
         font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
     }
     
-    /* 5. MENÜ BUTTON RECHTS */
-    /* Der Button oben rechts (die 3 Striche) */
+    /* 5. MENÜ BUTTON */
     div[data-testid="column"]:nth-of-type(2) button {
         float: right;
         font-size: 24px !important;
-        color: #0071e3 !important; /* Blau */
+        color: #0071e3 !important;
     }
 
     /* 6. MENÜ BOX */
@@ -151,7 +152,6 @@ st.markdown("""
     }
 
     /* 7. LISTE FIX */
-    /* Die Buttons in der Liste */
     div[data-testid="column"] button {
         text-align: left !important;
         width: 100% !important;
@@ -201,7 +201,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_final_final")
+geolocator = Nominatim(user_agent="berlin_force_transparent")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -231,9 +231,9 @@ df = load_data()
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL ANSICHT
-        # Hier nutzen wir keinen Button für "Zurück", sondern einen Link-Style Button
-        c_back, c_empty = st.columns([1, 4])
+        # DETAIL
+        # Zurück Button
+        c_back, c_dummy = st.columns([1,4])
         with c_back:
             if st.button("← Zurück", key="back_btn"):
                 st.session_state.detail_id = None
@@ -278,7 +278,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button -> wird durch CSS jetzt transparent
+                            # Button
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
