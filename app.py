@@ -56,94 +56,106 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (FORCE WHITE BACKGROUND) ---
+# --- CSS DESIGN (THEME OVERRIDE) ---
 st.markdown("""
     <style>
-    /* 1. THEME FORCE LIGHT */
+    /* 1. THEME VARIABLES OVERRIDE (ZWINGT LIGHT MODE) */
+    /* Das überschreibt die Dark-Mode Einstellungen des iPhones */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
-        --secondary-background-color: #fbfbfd;
-        --text-color: #000000;
-        --font: -apple-system, BlinkMacSystemFont, sans-serif;
+        --secondary-background-color: #f0f2f6;
+        --text-color: #262730;
+        --font: sans-serif;
     }
     
+    /* Hintergrund der gesamten App erzwingen */
     .stApp {
         background-color: #ffffff !important;
-    }
-    
-    /* Header weg */
-    header {visibility: hidden;}
-    .block-container { padding-top: 1.5rem !important; }
-
-    /* 2. BUTTONS ZWINGEN WEISS ZU SEIN */
-    /* Wir setzen den Hintergrund hart auf Weiß (#ffffff). Nicht transparent. */
-    
-    div.stButton > button {
-        background-color: #ffffff !important; 
-        color: #0071e3 !important; /* Apple Blau für Links */
-        border: none !important;
-        box-shadow: none !important;
-        text-align: left !important;
-        font-weight: 500 !important;
-        padding: 5px 0px !important; /* Weniger Padding */
-        height: auto !important;
-        min-height: 0px !important;
+        color: #262730 !important;
     }
 
-    /* Hover Status */
-    div.stButton > button:hover {
+    /* 2. BUTTONS FIXEN */
+    /* Wir setzen Hintergrund explizit auf Weiß und Text auf Blau/Schwarz */
+    div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important;
-        color: #005bb5 !important; /* Dunkleres Blau */
+        color: #000000 !important;
+        border: 1px solid #f0f0f0 !important; /* Ganz feiner Rahmen hilft beim Rendering */
+        box-shadow: none !important;
+        text-shadow: none !important;
+        background-image: none !important;
     }
 
-    /* Active/Focus Status */
-    div.stButton > button:active, div.stButton > button:focus {
-        background-color: #ffffff !important;
-        border: none !important;
-        box-shadow: none !important;
+    /* Hover und Active Status */
+    div.stButton > button:not([kind="primary"]):hover,
+    div.stButton > button:not([kind="primary"]):active,
+    div.stButton > button:not([kind="primary"]):focus {
+        background-color: #f9f9f9 !important; /* Leichtes Grau beim Klicken */
         color: #0071e3 !important;
+        border-color: #0071e3 !important;
     }
 
-    /* 3. PRIMARY BUTTONS (SPEICHERN) - Die sollen Blau sein */
+    /* 3. PRIMARY BUTTONS (Bleiben Blau) */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
-        text-align: center !important;
+        border: none !important;
         padding: 10px 20px !important;
         border-radius: 8px !important;
-        margin-top: 10px !important;
-    }
-    div.stButton > button[kind="primary"]:hover {
-        background-color: #005bb5 !important;
     }
 
-    /* 4. MENÜ BUTTON RECHTS */
-    /* Der Toggle Button bekommt extra Styling */
-    div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-        text-align: right !important;
-        font-size: 24px !important;
-        color: #000000 !important; /* Menü Icon Schwarz */
-        width: 100%;
-    }
+    /* 4. LAYOUT & TEXT */
+    header {visibility: hidden;}
+    .block-container { padding-top: 2rem !important; }
 
-    /* 5. TITEL */
     .app-title {
-        font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
+        font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
+    }
+    
+    .address-text {
+        font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; 
+    }
+    
+    hr { margin: 8px 0; border-color: #e5e5ea; }
+
+    /* 5. MENÜ BUTTON RECHTS */
+    div[data-testid="column"]:nth-of-type(2) button {
+        float: right;
+        font-size: 24px !important;
+        color: #000000 !important;
+        background-color: transparent !important;
+        border: none !important;
     }
 
-    /* 6. TEXTE */
-    .address-text {
-        font-size: 13px; color: #666666 !important; margin-top: -8px; line-height: 1.3; 
+    /* 6. MENÜ BOX */
+    .menu-box {
+        background-color: #ffffff;
+        border: 1px solid #e5e5ea;
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
-    
-    hr { margin: 5px 0 10px 0; border-color: #f0f0f0; }
-    
-    /* Segmented Control */
+    /* Buttons im Menü */
+    .menu-box button {
+        text-align: left !important;
+        width: 100% !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        border-radius: 0px !important;
+    }
+
+    /* 7. LISTE FIX */
+    /* Container für Listen-Buttons */
+    div[data-testid="column"] button {
+        text-align: left !important;
+        width: 100% !important;
+        padding-left: 0px !important;
+    }
+
     div.row-widget.stRadio > div {
-        background-color: #f2f2f7; border-radius: 8px; justify-content: center;
+        flex-direction: row; background-color: #f2f2f7; padding: 2px;
+        border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
-    
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
@@ -154,7 +166,6 @@ c1, c2 = st.columns([7, 1])
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 with c2:
-    # Menü Button
     label = "✖️" if st.session_state.menu_open else "☰"
     if st.button(label, key="menu_main"):
         toggle_menu()
@@ -162,22 +173,19 @@ with c2:
 
 # --- MENÜ ---
 if st.session_state.menu_open:
-    st.markdown("<div style='background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
-    c_m1, c_m2, c_m3 = st.columns(3)
-    with c_m1:
-        if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
-    with c_m2:
-        if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
-    with c_m3:
-        if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="menu-box">', unsafe_allow_html=True)
+    # Buttons untereinander im Menü für saubere Optik auf Mobile
+    if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
+    if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
+    if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_white_v2")
+geolocator = Nominatim(user_agent="berlin_force_light")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -210,7 +218,7 @@ if st.session_state.page == 'Übersicht':
         # DETAIL
         c_back, c_x = st.columns([1,3])
         with c_back:
-            if st.button("← Zurück"): 
+            if st.button("← Zurück", key="back_btn"): 
                 st.session_state.detail_id = None
                 st.rerun()
             
@@ -253,7 +261,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button -> Sollte jetzt weißer Hintergrund mit blauem Text sein
+                            # Button
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
