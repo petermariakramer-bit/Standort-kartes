@@ -441,4 +441,4 @@ elif st.session_state.page == 'Neuer Eintrag':
                 "breitengrad": [final_lat], "laengengrad": [final_lon], "bild_pfad": [img_path]
             })
             save_data(pd.concat([df, new_row], ignore_index=True))
-            st.success("Gespeichert!"
+            st.success("Gespeichert!")
