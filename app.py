@@ -10,7 +10,7 @@ import base64
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="Berlin Lichtenberg", 
+    page_title="Dialog Displays", 
     layout="wide", 
     page_icon="🐻",
     initial_sidebar_state="collapsed"
@@ -24,9 +24,9 @@ if 'menu_open' not in st.session_state:
     st.session_state.menu_open = False
 
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [52.51, 13.48] # Berlin Lichtenberg
+    st.session_state.map_center = [52.51, 13.48] # Berlin Standard
 if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = 13
+    st.session_state.map_zoom = 12
 
 if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
@@ -34,7 +34,7 @@ if 'detail_id' not in st.session_state:
 def set_page(page_name):
     st.session_state.page = page_name
     st.session_state.detail_id = None
-    st.session_state.menu_open = False
+    st.session_state.menu_open = False # Menü schließen bei Klick
 
 def toggle_menu():
     st.session_state.menu_open = not st.session_state.menu_open
@@ -59,7 +59,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (STABIL) ---
+# --- CSS DESIGN (STABIL - KEIN STICKY) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
@@ -72,8 +72,9 @@ st.markdown("""
     /* Header ausblenden */
     header {visibility: hidden;}
     
+    /* Normaler Abstand oben */
     .block-container { 
-        padding-top: 1rem !important; 
+        padding-top: 2rem !important; 
         padding-left: 1rem !important; 
         padding-right: 1rem !important; 
         max-width: 100% !important; 
@@ -81,12 +82,11 @@ st.markdown("""
 
     /* 2. TITEL */
     .app-title {
-        font-size: 24px; 
+        font-size: 26px; 
         font-weight: 700; 
         color: #000000 !important;
         margin: 0;
         white-space: nowrap;
-        padding-top: 5px;
     }
 
     /* 3. MENÜ BUTTON */
@@ -94,8 +94,10 @@ st.markdown("""
         border: none;
         background: transparent;
         box-shadow: none;
-        float: right;
-        font-size: 22px !important;
+        float: right; /* Rechtsbündig */
+        font-size: 24px !important;
+        padding: 0px !important;
+        color: #0071e3 !important;
     }
     div.stButton > button:hover {
         background: #f5f5f7;
@@ -106,52 +108,48 @@ st.markdown("""
         background-color: #fbfbfd;
         border-radius: 12px;
         padding: 15px;
+        margin-top: 10px;
         margin-bottom: 20px;
         border: 1px solid #e5e5ea;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
+    
+    /* Buttons im Menü groß und linksbündig */
+    .menu-box button {
+        text-align: left !important;
+        font-size: 18px !important;
+        width: 100% !important;
+        float: none !important;
+    }
 
-    /* 5. LISTE */
+    /* 5. LISTE STYLING */
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
     }
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* Segmented Control */
+    /* Segmented Control Fix */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
-    div.row-widget.stRadio > div > label {
-        background-color: transparent; border: none; padding: 5px 0px;
-        border-radius: 7px; margin: 0; width: 50%; text-align: center;
-        justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
-    }
-    div.row-widget.stRadio > div > label[data-checked="true"] {
-        background-color: #ffffff; color: #000 !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
-    }
     
-    /* Sidebar verstecken */
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
 # --- HEADER & NAVIGATION (STABIL) ---
-# Wir nutzen Spalten statt CSS-Hacks, damit nichts überlappt.
-
-# Layout: Titel (groß) | Button (klein, rechts)
-c_head_title, c_head_btn = st.columns([7, 1])
+c_head_title, c_head_btn = st.columns([8, 1])
 
 with c_head_title:
-    st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 
 with c_head_btn:
     # Toggle Button
     icon = "✖️" if st.session_state.menu_open else "☰"
-    if st.button(icon, key="menu_toggle", use_container_width=True):
+    if st.button(icon, key="menu_toggle"):
         toggle_menu()
         st.rerun()
 
@@ -159,16 +157,10 @@ with c_head_btn:
 if st.session_state.menu_open:
     with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-        st.caption("Navigation")
-        
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1:
-            if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
-        with c_m2:
-            if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
-        with c_m3:
-            if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-            
+        # Menüpunkte als volle Breite Buttons
+        if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
+        if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
+        if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -177,7 +169,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_app_stable")
+geolocator = Nominatim(user_agent="app_stable_revert")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -204,6 +196,7 @@ def save_data(df):
     df.to_csv(CSV_FILE, index=False)
 
 df = load_data()
+
 
 # --- CONTENT ---
 
@@ -247,7 +240,6 @@ if st.session_state.page == 'Übersicht':
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
-                    # LISTENEINTRAG
                     with st.container():
                         col_txt, col_img = st.columns([3.5, 1])
                         
@@ -255,6 +247,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
+                            # Klickbarer Name
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -273,7 +266,7 @@ if st.session_state.page == 'Übersicht':
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             
-            if st.session_state.map_zoom == 13 and not df.empty:
+            if st.session_state.map_zoom == 12 and not df.empty:
                 valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
                 if not valid.empty:
                     sw = valid[['breitengrad', 'laengengrad']].min().values.tolist()
@@ -367,7 +360,7 @@ elif st.session_state.page == 'Verwaltung':
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Tabelle speichern", type="primary", use_container_width=True):
+    if st.button("💾 Speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
