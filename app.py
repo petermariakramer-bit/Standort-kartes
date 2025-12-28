@@ -20,19 +20,18 @@ if 'map_center' not in st.session_state:
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 5
 
-# State für Detail-Ansicht
 if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
 
 def set_page(page_name):
     st.session_state.page = page_name
-    st.session_state.detail_id = None # Details resetten bei Seitenwechsel
+    st.session_state.detail_id = None
 
 def set_map_focus(lat, lon):
     st.session_state.map_center = [lat, lon]
     st.session_state.map_zoom = 15
 
-# --- HELPER: BILDER & ORDNER ---
+# --- HELPER ---
 DATA_FOLDER = 'data'
 IMAGE_FOLDER = 'data/images'
 os.makedirs(DATA_FOLDER, exist_ok=True)
@@ -55,77 +54,94 @@ def get_image_base64(file_path):
 # --- CSS DESIGN ---
 st.markdown("""
     <style>
-    /* 1. GLOBAL */
+    /* 1. GLOBAL RESET */
     .stApp { background-color: #ffffff !important; }
-    html, body, p, div, label, h1, h2, h3, .stMarkdown, span {
+    html, body, p, div, label, h1, h2, h3, .stMarkdown, span, button {
         color: #1d1d1f !important;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
+    /* Header ausblenden und Platz oben schaffen */
     header {visibility: hidden;}
-    /* Weniger Padding oben für App-Feeling */
-    .block-container { padding-top: 0.5rem !important; max-width: 100% !important; padding-left: 1rem; padding-right: 1rem; }
-
-    /* 2. HEADER & TITEL */
-    .app-title {
-        font-size: 22px; font-weight: 700; color: #1d1d1f;
-        margin: 0; line-height: 2.5rem; white-space: nowrap;
+    .block-container { 
+        padding-top: 1rem !important; 
+        padding-left: 0.5rem !important; 
+        padding-right: 0.5rem !important; 
+        max-width: 100% !important; 
     }
 
-    /* 3. NAVIGATION ICONS (RECHTS OBEN) */
-    /* Wir machen die Buttons transparent und groß */
-    div[data-testid="stHorizontalBlock"] button {
+    /* 2. STICKY HEADER CONTAINER */
+    /* Dieser Container klebt oben und hält Titel und Icons */
+    div[data-testid="stVerticalBlock"] > div:first-child {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px); /* Apple Milchglas-Effekt */
+        border-bottom: 1px solid #e5e5ea;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        margin-top: -60px; /* Zieht es ganz nach oben in den Hidden Header Bereich */
+    }
+
+    /* 3. MOBILE LAYOUT FIX (Kein Umbruch der Icons!) */
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important; /* WICHTIG: Zwingt Elemente nebeneinander */
+        align-items: center !important;
+        white-space: nowrap !important;
+    }
+
+    /* 4. TITEL */
+    .app-title {
+        font-size: 22px; 
+        font-weight: 700; 
+        color: #000000 !important;
+        margin: 0;
+        padding-left: 5px;
+    }
+
+    /* 5. NAVIGATION ICONS BUTTONS */
+    /* Wir stylen die Buttons im Header speziell */
+    .nav-btn button {
         background-color: transparent !important;
         border: none !important;
-        padding: 0px !important;
-        margin: 0px !important;
-        font-size: 20px !important; /* Icon Größe */
+        color: #0071e3 !important; /* Blau */
+        font-size: 22px !important;
+        padding: 0px 5px !important;
+        margin: 0 !important;
         line-height: 1 !important;
-        min-height: 0px !important;
-    }
-    div[data-testid="stHorizontalBlock"] button:hover {
-        color: #0071e3 !important;
-        background-color: transparent !important;
-    }
-    /* Das aktive Icon blau färben */
-    button[kind="primary"] span {
-        color: #0071e3 !important;
-    }
-
-    /* 4. LISTE STYLING MIT TRENNLINIEN */
-    /* Container für einen Listeneintrag */
-    .list-entry-container {
-        padding-top: 12px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #d1d1d6; /* Deutliche Trennlinie (iOS Grau) */
-    }
-
-    /* Button Text Links */
-    div[data-testid="stVerticalBlock"] .stButton button {
-        width: 100%; background-color: transparent; color: #0071e3; border: none;
-        text-align: left !important; justify-content: flex-start !important; 
-        padding-left: 0px !important; font-weight: 600 !important;
-        font-size: 17px !important; margin: 0px !important; height: auto !important;
         box-shadow: none !important;
     }
-    
-    .address-text {
-        font-size: 13px; color: #86868b !important; 
-        margin-top: -2px; line-height: 1.4; 
+    .nav-btn button:hover {
+        color: #005bb5 !important;
     }
-    
-    /* Bild in der Liste */
-    div[data-testid="stImage"] img {
-        border-radius: 8px; object-fit: cover; height: 55px !important; width: 100% !important;
+    /* Aktiver Button (optional dunkler) */
+    .nav-btn-active button {
+        background-color: #f0f0f0 !important;
+        border-radius: 50%;
     }
 
-    /* 5. SEGMENTED CONTROL */
+    /* 6. LISTE (Einträge) */
+    .address-text {
+        font-size: 13px; color: #86868b !important; 
+        margin-top: -2px; line-height: 1.3; 
+    }
+    
+    /* Buttons in der Liste (Linksbündig) */
+    div[data-testid="stVerticalBlock"] button {
+        text-align: left !important;
+    }
+
+    /* Trennlinie */
+    hr { margin: 0; border-color: #e5e5ea; }
+    
+    /* 7. SEGMENTED CONTROL (Liste/Karte) */
     div.row-widget.stRadio > div {
-        flex-direction: row; background-color: #f2f2f7; padding: 3px;
-        border-radius: 9px; width: 100%; justify-content: center; margin-top: 10px;
+        flex-direction: row; background-color: #f2f2f7; padding: 2px;
+        border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
     div.row-widget.stRadio > div > label {
-        background-color: transparent; border: none; padding: 5px 10px;
+        background-color: transparent; border: none; padding: 5px 0px;
         border-radius: 7px; margin: 0; width: 50%; text-align: center;
         justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
     }
@@ -134,50 +150,48 @@ st.markdown("""
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
 
-    /* Ausrichtung fixen */
-    div[data-testid="column"] { align-items: center; display: flex; }
+    /* Verhindert horizontales Scrollen */
+    div[data-testid="stAppViewContainer"] {
+        overflow-x: hidden;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- NAVIGATION (NEU: ICONS RECHTS) ---
-# Layout: [Titel (groß), Spacer, Icon1, Icon2, Icon3]
-# Wir geben dem Titel viel Platz (6), dann spacer (3), dann kleine Slots für Icons (1)
-c_title, c_space, c_home, c_manage, c_add = st.columns([6, 2, 1, 1, 1])
+# --- HEADER NAVIGATION ---
+# Container für den Sticky Header
+with st.container():
+    # Spaltenverhältnis: Titel bekommt viel Platz, Icons rechts festen kleinen Platz.
+    # [5, 1, 1, 1] verhindert, dass sie zu breit werden.
+    c_title, c_home, c_manage, c_add = st.columns([5, 0.8, 0.8, 0.8])
 
-with c_title:
-    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
+    with c_title:
+        st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 
-# Icon 1: Übersicht (Haus)
-with c_home:
-    btn_type = "primary" if st.session_state.page == "Übersicht" else "secondary"
-    # Wir nutzen Emojis als Icons. Alternativ könnte man Material Icons via Markdown nutzen.
-    if st.button("🏠", type=btn_type, help="Übersicht", use_container_width=True):
-        set_page("Übersicht"); st.rerun()
+    # Funktion für Button-Styling (Klasse hinzufügen hacky über leeren Container)
+    def nav_button(emoji, page_target, col):
+        with col:
+            # Container trick für CSS Klasse
+            st.markdown(f'<div class="nav-btn">', unsafe_allow_html=True)
+            if st.button(emoji, key=f"nav_{page_target}", use_container_width=True):
+                set_page(page_target)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-# Icon 2: Verwaltung (Zahnrad oder Liste)
-with c_manage:
-    btn_type = "primary" if st.session_state.page == "Verwaltung" else "secondary"
-    if st.button("⚙️", type=btn_type, help="Verwaltung", use_container_width=True):
-        set_page("Verwaltung"); st.rerun()
+    nav_button("🏠", "Übersicht", c_home)
+    nav_button("⚙️", "Verwaltung", c_manage)
+    nav_button("➕", "Neuer Eintrag", c_add)
 
-# Icon 3: Neuer Eintrag (Plus)
-with c_add:
-    btn_type = "primary" if st.session_state.page == "Neuer Eintrag" else "secondary"
-    if st.button("➕", type=btn_type, help="Neuer Eintrag", use_container_width=True):
-        set_page("Neuer Eintrag"); st.rerun()
-
-# Feine Linie unter dem Header
-st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 10px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+# Kleiner Abstand nach dem Header
+st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_v5_icons")
+geolocator = Nominatim(user_agent="dialog_app_mobile_final")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
     cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad", "baujahr", "hersteller"]
-    
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
@@ -205,9 +219,9 @@ df = load_data()
 
 if st.session_state.page == 'Übersicht':
     
-    # --- DETAIL ANSICHT ---
     if st.session_state.detail_id is not None:
-        if st.button("← Zurück", type="secondary"):
+        # DETAIL ANSICHT
+        if st.button("← Zurück", type="secondary", use_container_width=True):
             st.session_state.detail_id = None
             st.rerun()
             
@@ -221,62 +235,50 @@ if st.session_state.page == 'Übersicht':
             
         st.markdown("---")
         
-        c_det1, c_det2 = st.columns(2)
-        with c_det1:
+        c1, c2 = st.columns(2)
+        with c1:
             st.markdown(f"**Typ:** {entry['typ']}")
             st.markdown(f"**Hersteller:** {entry['hersteller']}")
             st.markdown(f"**Baujahr:** {entry['baujahr']}")
-        with c_det2:
+        with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
             
         if entry['breitengrad'] != 0:
             st.markdown("### Karte")
             m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
-            folium.Marker(
-                [entry['breitengrad'], entry['laengengrad']],
-                icon=folium.Icon(color="blue", icon="info-sign")
-            ).add_to(m_detail)
+            folium.Marker([entry['breitengrad'], entry['laengengrad']], icon=folium.Icon(color="blue", icon="info-sign")).add_to(m_detail)
             st_folium(m_detail, width="100%", height=250)
 
-    # --- LISTE / KARTE ---
     else:
+        # LISTE / KARTE SWITCH
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
-                
-                # Container für die Liste
-                with st.container():
-                    for _, row in df_display.iterrows():
+                for _, row in df_display.iterrows():
+                    # LISTENEINTRAG
+                    with st.container():
+                        col_txt, col_img = st.columns([3.5, 1])
                         
-                        # --- EIN LISTENEINTRAG ---
-                        # Wir nutzen Columns für das Layout (Text links, Bild rechts)
-                        # Das CSS .list-entry-container sorgt für die Linie unten
-                        
-                        col_content, col_img = st.columns([3.5, 1])
-                        
-                        with col_content:
-                            label_header = f"{row['nummer']} - {row['bundesnummer']}"
-                            if label_header.strip() in ["-", " - "]: label_header = "Ohne Nummer"
-
-                            # Der Name ist der Button
-                            if st.button(label_header, key=f"list_{row['id']}"):
+                        with col_txt:
+                            label = f"{row['nummer']} - {row['bundesnummer']}"
+                            if label.strip() in ["-", " - "]: label = "Ohne Nummer"
+                            
+                            # Button mit CSS Styling für Link-Look
+                            if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
                             
-                            strasse = row['strasse'] if row['strasse'] else ""
-                            plz_ort = f"{row['plz']} {row['stadt']}".strip()
-                            st.markdown(f"<div class='address-text'>{strasse}<br>{plz_ort}</div>", unsafe_allow_html=True)
+                            addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
+                            st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
                         
                         with col_img:
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 st.image(row['bild_pfad'], use_container_width=True)
-                        
-                        # Die Trennlinie wird nun hier eingefügt, aber wir nutzen besser 
-                        # eine CSS Klasse im Loop oder einfach eine HR
-                        st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 10px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
+                                
+                    # Trennlinie
+                    st.markdown("<hr style='margin: 8px 0; border-color: #f0f0f0;'>", unsafe_allow_html=True)
             else:
                 st.info("Keine Einträge.")
 
@@ -284,42 +286,32 @@ if st.session_state.page == 'Übersicht':
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             
             if st.session_state.map_zoom == 5 and not df.empty:
-                valid_coords = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
-                if not valid_coords.empty:
-                    sw = valid_coords[['breitengrad', 'laengengrad']].min().values.tolist()
-                    ne = valid_coords[['breitengrad', 'laengengrad']].max().values.tolist()
+                valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
+                if not valid.empty:
+                    sw = valid[['breitengrad', 'laengengrad']].min().values.tolist()
+                    ne = valid[['breitengrad', 'laengengrad']].max().values.tolist()
                     if sw != ne: m.fit_bounds([sw, ne])
 
             for _, row in df.iterrows():
                 if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
                     c = "blue" if row['typ'] == "Dialog Display" else "gray"
-                    
+                    # Kleines Bild im Popup
                     img_html = ""
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
-                        b64_str = get_image_base64(row['bild_pfad'])
-                        if b64_str:
-                            img_html = f'<img src="data:image/jpeg;base64,{b64_str}" style="width:100%; border-radius:8px; margin-bottom:10px;">'
+                        b64 = get_image_base64(row['bild_pfad'])
+                        if b64: img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; border-radius:6px; margin-bottom:5px;">'
                     
-                    popup_content = f"""
-                    <div style="font-family:-apple-system, sans-serif; width:180px;">
-                        {img_html}
-                        <b>{row['nummer']}</b><br>{row['strasse']}
-                    </div>
-                    """
-                    folium.Marker(
-                        [row['breitengrad'], row['laengengrad']],
-                        popup=folium.Popup(popup_content, max_width=250),
-                        icon=folium.Icon(color=c, icon="info-sign")
-                    ).add_to(m)
+                    popup = f"<div style='width:160px; font-family:sans-serif;'>{img_html}<b>{row['nummer']}</b><br>{row['strasse']}</div>"
+                    folium.Marker([row['breitengrad'], row['laengengrad']], popup=folium.Popup(popup, max_width=200), icon=folium.Icon(color=c, icon="info-sign")).add_to(m)
             
             st_folium(m, width="100%", height=600)
 
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
+    # Tabelle
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
-
     column_cfg = {
         "Löschen?": st.column_config.CheckboxColumn("🗑️", width="small"),
         "id": None, "bild_pfad": None,
@@ -331,87 +323,72 @@ elif st.session_state.page == 'Verwaltung':
         "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
         "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
     }
-
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
-
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Speichern", type="primary"):
+    if st.button("💾 Tabelle speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
-        final_df = rows_to_keep.drop(columns=["Löschen?"])
-        save_data(final_df)
+        save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
         st.rerun()
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.subheader("Bild-Verwaltung")
-    
+    st.subheader("Bild ändern")
     if not df.empty:
-        df_sorted = df.sort_values('nummer')
-        options = {f"{r['nummer']} - {r['strasse']}": r['id'] for i, r in df_sorted.iterrows()}
-        sel_label = st.selectbox("Eintrag wählen:", options.keys())
-        sel_id = options[sel_label]
+        opts = {f"{r['nummer']}": r['id'] for i, r in df.sort_values('nummer').iterrows()}
+        sel_label = st.selectbox("Eintrag:", opts.keys())
+        sel_id = opts[sel_label]
         
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']):
             st.image(curr['bild_pfad'], width=150)
             
-        up = st.file_uploader("Bild ändern", type=['jpg','png'])
-        if st.button("Bild speichern"):
+        up = st.file_uploader("Neues Foto", type=['jpg','png'])
+        if st.button("Foto speichern", use_container_width=True):
             if up:
-                new_p = save_uploaded_image(up, sel_id)
+                np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
-                df.at[idx, 'bild_pfad'] = new_p
+                df.at[idx, 'bild_pfad'] = np
                 save_data(df)
-                st.success("Bild gespeichert!")
+                st.success("Foto gespeichert!")
                 st.rerun()
 
 elif st.session_state.page == 'Neuer Eintrag':
     st.header("Neuer Eintrag")
-    
-    with st.form("new", clear_on_submit=False):
+    with st.form("new"):
         c1, c2 = st.columns(2)
         nummer = c1.text_input("Nummer")
         bundesnummer = c2.text_input("Bundesnummer")
-        
         col_str, col_plz, col_stadt = st.columns([2, 1, 1])
-        strasse = col_str.text_input("Straße", placeholder="Heerstr. 12")
-        plz = col_plz.text_input("PLZ", placeholder="10115")
-        stadt = col_stadt.text_input("Stadt", placeholder="Berlin")
-        
+        strasse = col_str.text_input("Straße")
+        plz = col_plz.text_input("PLZ")
+        stadt = col_stadt.text_input("Stadt")
         c_her, c_bau = st.columns(2)
         hersteller = c_her.text_input("Hersteller")
         baujahr = c_bau.text_input("Baujahr")
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        uploaded_img = st.file_uploader("Foto (Optional)", type=['png', 'jpg'])
+        uploaded_img = st.file_uploader("Foto", type=['png', 'jpg'])
         
-        with st.expander("Manuelle Koordinaten"):
-            gc1, gc2 = st.columns(2)
-            manual_lat = gc1.number_input("Lat", value=0.0, format="%.6f")
-            manual_lon = gc2.number_input("Lon", value=0.0, format="%.6f")
+        with st.expander("Koordinaten (Optional)"):
+            g1, g2 = st.columns(2)
+            mlat = g1.number_input("Lat", value=0.0, format="%.5f")
+            mlon = g2.number_input("Lon", value=0.0, format="%.5f")
         
-        st.markdown("---")
         c_typ, c_dat = st.columns(2)
         typ = c_typ.selectbox("Typ", ["Dialog Display", "Ohne"])
         letzte_kontrolle = c_dat.date_input("Datum", datetime.date.today())
         
-        if st.form_submit_button("Speichern", type="primary"):
+        if st.form_submit_button("Speichern", type="primary", use_container_width=True):
             final_lat, final_lon = 0.0, 0.0
             new_id = pd.Timestamp.now().strftime('%Y%m%d%H%M%S')
-            
-            img_path = ""
-            if uploaded_img: img_path = save_uploaded_image(uploaded_img, new_id)
+            img_path = save_uploaded_image(uploaded_img, new_id) if uploaded_img else ""
 
-            if manual_lat != 0.0:
-                final_lat, final_lon = manual_lat, manual_lon
+            if mlat != 0.0: final_lat, final_lon = mlat, mlon
             else:
-                full = f"{strasse}, {plz} {stadt}"
-                if strasse and stadt:
-                    try:
-                        loc = geocode(full)
-                        if loc: final_lat, final_lon = loc.latitude, loc.longitude
-                    except: pass
+                try:
+                    loc = geocode(f"{strasse}, {plz} {stadt}")
+                    if loc: final_lat, final_lon = loc.latitude, loc.longitude
+                except: pass
             
             new_row = pd.DataFrame({
                 "id": [new_id], "nummer": [nummer], "bundesnummer": [bundesnummer], 
