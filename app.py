@@ -9,12 +9,11 @@ import datetime
 import base64
 
 # --- PAGE CONFIG ---
-# "initial_sidebar_state='collapsed'" sorgt dafür, dass das Menü auf dem Handy zu ist
 st.set_page_config(
     page_title="Dialog Displays", 
     layout="wide", 
     page_icon="",
-    initial_sidebar_state="collapsed" 
+    initial_sidebar_state="collapsed"
 )
 
 # --- SESSION STATE ---
@@ -27,6 +26,10 @@ if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 5
 
 if 'detail_id' not in st.session_state:
+    st.session_state.detail_id = None
+
+def set_page(page_name):
+    st.session_state.page = page_name
     st.session_state.detail_id = None
 
 def set_map_focus(lat, lon):
@@ -63,20 +66,41 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header (der Streamlit Balken) ausblenden, aber den Toggle lassen */
-    header[data-testid="stHeader"] {
-        background-color: transparent !important;
-    }
+    /* Header (der Streamlit Balken) ausblenden */
+    header {visibility: hidden;}
     
     /* Inhalt etwas nach oben rücken */
     .block-container { 
-        padding-top: 2rem !important; 
+        padding-top: 1rem !important; 
         padding-left: 1rem !important; 
         padding-right: 1rem !important; 
         max-width: 100% !important; 
     }
+    
+    /* 2. CUSTOM MENU STYLING (Der Expander) */
+    div[data-testid="stExpander"] {
+        background-color: #fbfbfd;
+        border-radius: 10px;
+        border: 1px solid #e5e5ea;
+        margin-bottom: 20px;
+    }
+    div[data-testid="stExpander"] summary {
+        font-weight: 600;
+        color: #000;
+    }
+    /* Die Buttons im Menü */
+    div[data-testid="stExpander"] button {
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding-left: 0;
+    }
+    div[data-testid="stExpander"] button:hover {
+        color: #0071e3;
+        background: transparent;
+    }
 
-    /* 2. TITEL */
+    /* 3. TITEL */
     .app-title {
         font-size: 26px; 
         font-weight: 700; 
@@ -85,7 +109,7 @@ st.markdown("""
         white-space: nowrap;
     }
 
-    /* 3. LISTE & DETAILS */
+    /* 4. LISTE & DETAILS */
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
@@ -94,7 +118,7 @@ st.markdown("""
     /* Trennlinie */
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* 4. SEGMENTED CONTROL (Liste/Karte) */
+    /* 5. SEGMENTED CONTROL (Liste/Karte) */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
@@ -109,33 +133,32 @@ st.markdown("""
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
     
-    /* 5. SIDEBAR STYLING */
-    section[data-testid="stSidebar"] {
-        background-color: #fbfbfd; /* Apple Sidebar Grau */
-    }
+    /* Sidebar komplett verstecken, falls sie noch rendert */
+    section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- NAVIGATION (SIDEBAR) ---
-# Das ist das "ausklappbare Menü"
-with st.sidebar:
-    st.markdown("### Menü")
-    # Wir nutzen Radio Buttons für die Navigation, das ist sehr stabil
-    selected_page = st.radio(
-        "Navigation", 
-        ["Übersicht", "Verwaltung", "Neuer Eintrag"],
-        label_visibility="collapsed"
-    )
+# --- NAVIGATION (CUSTOM EXPANDER) ---
+# Das hier ist das "Menü hinter 3 Strichen". 
+# Wir nutzen ein Standard-Symbol (☰), das auf JEDEM Handy funktioniert.
+
+# Layout: Titel links, Menü rechts? 
+# Besser: Menü als Block drüber, typisch mobile Web.
+
+with st.expander("☰  Menü", expanded=False):
+    # Buttons für die Seiten
+    if st.button("🏠  Übersicht", use_container_width=True):
+        set_page("Übersicht")
+        st.rerun()
     
-    # State update nur wenn sich was ändert
-    if selected_page != st.session_state.page:
-        st.session_state.page = selected_page
-        st.session_state.detail_id = None # Detail resetten
+    if st.button("⚙️  Verwaltung", use_container_width=True):
+        set_page("Verwaltung")
         st.rerun()
         
-    st.markdown("---")
-    st.caption("Dialog Displays App v1.0")
+    if st.button("➕  Neuer Eintrag", use_container_width=True):
+        set_page("Neuer Eintrag")
+        st.rerun()
 
 
 # --- HEADER (HAUPTBEREICH) ---
@@ -145,7 +168,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_sidebar_v1")
+geolocator = Nominatim(user_agent="dialog_app_menu_final")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
