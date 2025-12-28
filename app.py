@@ -59,7 +59,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (IPHONE FIX) ---
+# --- CSS DESIGN (AGGRESSIVE FIX) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
@@ -78,52 +78,58 @@ st.markdown("""
         max-width: 100% !important; 
     }
 
-    /* 2. BUTTON FIX FÜR IPHONE / SAFARI */
-    /* Hier erzwingen wir, dass "normale" Buttons keinen Hintergrund haben */
-    div.stButton > button {
+    /* 2. BUTTON RESET (DAS WICHTIGSTE!) */
+    /* Wir zielen auf ALLE Buttons, die NICHT "primary" (rot/blau) sind */
+    button:not([kind="primary"]) {
         background-color: transparent !important;
         border: none !important;
-        color: #1d1d1f !important;
+        color: #000000 !important; /* Erzwingt Schwarz */
         box-shadow: none !important;
+        text-shadow: none !important;
         padding: 0px !important;
     }
-    /* Hover Effekt (nur Desktop relevant, stört aber nicht) */
-    div.stButton > button:hover {
-        color: #0071e3 !important;
-        background-color: transparent !important;
+    
+    /* Speziell für die divs, die den Button halten */
+    div.stButton > button:not([kind="primary"]) {
+        background: transparent !important;
+        border: 0px solid transparent !important;
+        color: #000000 !important;
     }
-    div.stButton > button:active {
+    
+    /* Hover Effekt leicht grau, aber kein schwarzer Block */
+    div.stButton > button:not([kind="primary"]):hover {
+        color: #0071e3 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Active/Focus state resetten */
+    div.stButton > button:not([kind="primary"]):active, 
+    div.stButton > button:not([kind="primary"]):focus {
         background-color: transparent !important;
+        color: #000000 !important;
+        box-shadow: none !important;
     }
 
-    /* 3. AUSNAHME: PRIMARY BUTTONS (Speichern etc.) */
-    /* Die sollen blau und button-artig bleiben */
+    /* 3. PRIMARY BUTTONS (Speichern etc. sollen sichtbar bleiben) */
     button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
-        padding: 10px 20px !important;
         border-radius: 8px !important;
-        margin-top: 10px !important;
-        width: 100% !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #005bb5 !important;
+        padding: 10px 20px !important;
+        border: none !important;
     }
 
     /* 4. TITEL */
     .app-title {
-        font-size: 26px; 
-        font-weight: 700; 
-        color: #000000 !important;
-        margin: 0;
-        white-space: nowrap;
+        font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
     }
     
     /* 5. MENÜ BUTTON RECHTS */
-    /* Der Menü-Button bekommt eine Sonderbehandlung für Größe */
+    /* Der Button oben rechts (die 3 Striche) */
     div[data-testid="column"]:nth-of-type(2) button {
         float: right;
         font-size: 24px !important;
+        color: #0071e3 !important; /* Blau */
     }
 
     /* 6. MENÜ BOX */
@@ -135,22 +141,23 @@ st.markdown("""
         margin-bottom: 20px;
         border: 1px solid #e5e5ea;
     }
-    /* Buttons im Menü linksbündig und groß */
     .menu-box button {
         text-align: left !important;
         width: 100% !important;
         font-size: 18px !important;
-        padding: 10px !important;
+        padding: 12px 5px !important;
         border-bottom: 1px solid #f0f0f0 !important;
+        color: #000000 !important;
     }
 
     /* 7. LISTE FIX */
-    /* Buttons in Spalten (Liste) müssen linksbündig sein */
+    /* Die Buttons in der Liste */
     div[data-testid="column"] button {
         text-align: left !important;
         width: 100% !important;
         font-weight: 600 !important;
         font-size: 16px !important;
+        color: #000000 !important;
     }
 
     .address-text {
@@ -163,7 +170,6 @@ st.markdown("""
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
-    
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
@@ -195,7 +201,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_app_iphone_fix")
+geolocator = Nominatim(user_agent="berlin_final_final")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -226,9 +232,12 @@ if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL ANSICHT
-        if st.button("← Zurück zur Liste", key="back_btn"):
-            st.session_state.detail_id = None
-            st.rerun()
+        # Hier nutzen wir keinen Button für "Zurück", sondern einen Link-Style Button
+        c_back, c_empty = st.columns([1, 4])
+        with c_back:
+            if st.button("← Zurück", key="back_btn"):
+                st.session_state.detail_id = None
+                st.rerun()
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         
@@ -269,7 +278,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button -> sieht jetzt wie Text aus
+                            # Button -> wird durch CSS jetzt transparent
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
