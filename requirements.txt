@@ -4,4 +4,4 @@ folium
 streamlit-folium
 geopy
 odfpy
-openpyx
+openpyxl
