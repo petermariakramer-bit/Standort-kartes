@@ -20,6 +20,9 @@ st.set_page_config(
 if 'page' not in st.session_state:
     st.session_state.page = 'Übersicht'
 
+if 'menu_open' not in st.session_state:
+    st.session_state.menu_open = False
+
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [51.16, 10.45] 
 if 'map_zoom' not in st.session_state:
@@ -31,6 +34,10 @@ if 'detail_id' not in st.session_state:
 def set_page(page_name):
     st.session_state.page = page_name
     st.session_state.detail_id = None
+    st.session_state.menu_open = False # Menü schließen nach Auswahl
+
+def toggle_menu():
+    st.session_state.menu_open = not st.session_state.menu_open
 
 def set_map_focus(lat, lon):
     st.session_state.map_center = [lat, lon]
@@ -66,59 +73,56 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header (der Streamlit Balken) ausblenden */
+    /* Header ausblenden */
     header {visibility: hidden;}
     
-    /* Inhalt etwas nach oben rücken */
     .block-container { 
         padding-top: 1rem !important; 
         padding-left: 1rem !important; 
         padding-right: 1rem !important; 
         max-width: 100% !important; 
     }
-    
-    /* 2. CUSTOM MENU STYLING (Der Expander) */
-    div[data-testid="stExpander"] {
-        background-color: #fbfbfd;
-        border-radius: 10px;
-        border: 1px solid #e5e5ea;
-        margin-bottom: 20px;
-    }
-    div[data-testid="stExpander"] summary {
-        font-weight: 600;
-        color: #000;
-    }
-    /* Die Buttons im Menü */
-    div[data-testid="stExpander"] button {
-        text-align: left;
-        border: none;
-        background: transparent;
-        padding-left: 0;
-    }
-    div[data-testid="stExpander"] button:hover {
-        color: #0071e3;
-        background: transparent;
-    }
 
-    /* 3. TITEL */
+    /* 2. TITEL */
     .app-title {
-        font-size: 26px; 
+        font-size: 24px; 
         font-weight: 700; 
         color: #000000 !important;
-        margin-bottom: 5px;
+        margin-bottom: 0px;
         white-space: nowrap;
+        padding-top: 5px;
     }
 
-    /* 4. LISTE & DETAILS */
+    /* 3. MENÜ BUTTON */
+    /* Den Menü-Button oben rechts stylen */
+    div.stButton > button {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+    }
+    div.stButton > button:hover {
+        background: #f5f5f7;
+    }
+
+    /* 4. MENÜ CONTAINER */
+    .menu-box {
+        background-color: #fbfbfd;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e5e5ea;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    /* 5. LISTE & DETAILS */
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
     }
     
-    /* Trennlinie */
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* 5. SEGMENTED CONTROL (Liste/Karte) */
+    /* Segmented Control (Radio) */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
@@ -133,42 +137,51 @@ st.markdown("""
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
     
-    /* Sidebar komplett verstecken, falls sie noch rendert */
+    /* Sidebar verstecken */
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- NAVIGATION (CUSTOM EXPANDER) ---
-# Das hier ist das "Menü hinter 3 Strichen". 
-# Wir nutzen ein Standard-Symbol (☰), das auf JEDEM Handy funktioniert.
+# --- HEADER & NAVIGATION ---
 
-# Layout: Titel links, Menü rechts? 
-# Besser: Menü als Block drüber, typisch mobile Web.
+# Layout: Titel links, Menü-Button rechts
+c_head_title, c_head_btn = st.columns([6, 1])
 
-with st.expander("☰  Menü", expanded=False):
-    # Buttons für die Seiten
-    if st.button("🏠  Übersicht", use_container_width=True):
-        set_page("Übersicht")
+with c_head_title:
+    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
+
+with c_head_btn:
+    # Der Toggle-Button: Ändert den Status von 'menu_open'
+    # Wir nutzen ein einfaches Text-Zeichen, das geht immer.
+    btn_label = "✖️" if st.session_state.menu_open else "☰"
+    if st.button(btn_label, key="menu_toggle", use_container_width=True):
+        toggle_menu()
         st.rerun()
-    
-    if st.button("⚙️  Verwaltung", use_container_width=True):
-        set_page("Verwaltung")
-        st.rerun()
+
+# --- MENÜ INHALT (Wird nur angezeigt, wenn offen) ---
+if st.session_state.menu_open:
+    with st.container():
+        st.markdown('<div class="menu-box">', unsafe_allow_html=True)
+        st.caption("Navigation")
         
-    if st.button("➕  Neuer Eintrag", use_container_width=True):
-        set_page("Neuer Eintrag")
-        st.rerun()
+        c_m1, c_m2, c_m3 = st.columns(3)
+        with c_m1:
+            if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
+        with c_m2:
+            if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
+        with c_m3:
+            if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
-# --- HEADER (HAUPTBEREICH) ---
-st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_menu_final")
+geolocator = Nominatim(user_agent="dialog_app_manual_nav")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
@@ -246,7 +259,6 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button mit CSS Styling für Link-Look
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
