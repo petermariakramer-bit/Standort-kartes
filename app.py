@@ -59,17 +59,16 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (REPARIERT) ---
+# --- CSS DESIGN (IPHONE FIX) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
     .stApp { background-color: #ffffff !important; }
-    html, body, p, div, label, h1, h2, h3, .stMarkdown, span, button {
+    html, body, p, div, label, h1, h2, h3, .stMarkdown, span {
         color: #1d1d1f !important;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header ausblenden */
     header {visibility: hidden;}
     
     .block-container { 
@@ -79,7 +78,39 @@ st.markdown("""
         max-width: 100% !important; 
     }
 
-    /* 2. TITEL */
+    /* 2. BUTTON FIX FÜR IPHONE / SAFARI */
+    /* Hier erzwingen wir, dass "normale" Buttons keinen Hintergrund haben */
+    div.stButton > button {
+        background-color: transparent !important;
+        border: none !important;
+        color: #1d1d1f !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+    }
+    /* Hover Effekt (nur Desktop relevant, stört aber nicht) */
+    div.stButton > button:hover {
+        color: #0071e3 !important;
+        background-color: transparent !important;
+    }
+    div.stButton > button:active {
+        background-color: transparent !important;
+    }
+
+    /* 3. AUSNAHME: PRIMARY BUTTONS (Speichern etc.) */
+    /* Die sollen blau und button-artig bleiben */
+    button[kind="primary"] {
+        background-color: #0071e3 !important;
+        color: #ffffff !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        margin-top: 10px !important;
+        width: 100% !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #005bb5 !important;
+    }
+
+    /* 4. TITEL */
     .app-title {
         font-size: 26px; 
         font-weight: 700; 
@@ -87,15 +118,15 @@ st.markdown("""
         margin: 0;
         white-space: nowrap;
     }
-
-    /* 3. MENÜ BUTTON (Kein Globales Button-Styling mehr!) */
-    /* Wir stylen Buttons nur sanft, damit die Liste nicht kaputt geht */
-    button:hover {
-        border-color: #0071e3 !important;
-        color: #0071e3 !important;
+    
+    /* 5. MENÜ BUTTON RECHTS */
+    /* Der Menü-Button bekommt eine Sonderbehandlung für Größe */
+    div[data-testid="column"]:nth-of-type(2) button {
+        float: right;
+        font-size: 24px !important;
     }
 
-    /* 4. MENÜ CONTAINER */
+    /* 6. MENÜ BOX */
     .menu-box {
         background-color: #fbfbfd;
         border-radius: 12px;
@@ -103,38 +134,23 @@ st.markdown("""
         margin-top: 10px;
         margin-bottom: 20px;
         border: 1px solid #e5e5ea;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
-    
-    /* Die Buttons IM Menü sollen wie Links aussehen */
+    /* Buttons im Menü linksbündig und groß */
     .menu-box button {
         text-align: left !important;
         width: 100% !important;
-        border: none !important;
-        background: transparent !important;
         font-size: 18px !important;
         padding: 10px !important;
-    }
-    .menu-box button:hover {
-        background-color: #f0f0f5 !important;
-        border-radius: 8px !important;
+        border-bottom: 1px solid #f0f0f0 !important;
     }
 
-    /* 5. LISTE STYLING */
-    /* Hier sorgen wir dafür, dass die Liste sauber aussieht */
-    .list-item-container {
-        padding: 10px 0;
-    }
-    
-    /* Listen-Buttons linksbündig und sauber */
+    /* 7. LISTE FIX */
+    /* Buttons in Spalten (Liste) müssen linksbündig sein */
     div[data-testid="column"] button {
         text-align: left !important;
-        border: none !important;
-        background: transparent !important;
-        padding-left: 0 !important;
+        width: 100% !important;
         font-weight: 600 !important;
         font-size: 16px !important;
-        box-shadow: none !important;
     }
 
     .address-text {
@@ -143,7 +159,6 @@ st.markdown("""
     }
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* Segmented Control Fix */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
@@ -155,16 +170,13 @@ st.markdown("""
 
 
 # --- HEADER & NAVIGATION ---
-# Layout: Titel (groß) | Button (klein, rechts)
 c_head_title, c_head_btn = st.columns([7, 1])
 
 with c_head_title:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 
 with c_head_btn:
-    # Toggle Button
     icon = "✖️" if st.session_state.menu_open else "☰"
-    # Wir geben dem Button einen eindeutigen Key, aber verlassen uns aufs Standard-Styling
     if st.button(icon, key="menu_toggle"):
         toggle_menu()
         st.rerun()
@@ -173,19 +185,17 @@ with c_head_btn:
 if st.session_state.menu_open:
     with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-        # Menüpunkte
-        if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
-        if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
-        if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+        if st.button("🏠  Übersicht", key="nav_home"): set_page("Übersicht"); st.rerun()
+        if st.button("⚙️  Verwaltung", key="nav_admin"): set_page("Verwaltung"); st.rerun()
+        if st.button("➕  Neuer Eintrag", key="nav_add"): set_page("Neuer Eintrag"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
 
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_app_fix_list")
+geolocator = Nominatim(user_agent="berlin_app_iphone_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -193,19 +203,15 @@ def load_data():
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
-    
     df = pd.read_csv(CSV_FILE)
     for col in cols:
         if col not in df.columns: df[col] = ""
-    
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
-    
     text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
         if col in df.columns:
             df[col] = df[col].astype(str).replace("nan", "").apply(lambda x: x.replace(".0", "") if x.endswith(".0") else x)
-
     return df
 
 def save_data(df):
@@ -220,7 +226,7 @@ if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL ANSICHT
-        if st.button("← Zurück", key="back_btn", use_container_width=True):
+        if st.button("← Zurück zur Liste", key="back_btn"):
             st.session_state.detail_id = None
             st.rerun()
             
@@ -249,7 +255,7 @@ if st.session_state.page == 'Übersicht':
             st_folium(m_detail, width="100%", height=250)
 
     else:
-        # LISTE / KARTE SWITCH
+        # LISTE / KARTE
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -257,14 +263,13 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # Wir nutzen hier Columns, um Layout zu erzwingen
                         col_txt, col_img = st.columns([3.5, 1])
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Klickbarer Name
+                            # Button -> sieht jetzt wie Text aus
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -282,7 +287,6 @@ if st.session_state.page == 'Übersicht':
 
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
-            
             if st.session_state.map_zoom == 12 and not df.empty:
                 valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
                 if not valid.empty:
@@ -306,10 +310,9 @@ if st.session_state.page == 'Übersicht':
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
-    # IMPORT
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten"):
+        if uploaded_file and st.button("Import starten", type="primary"):
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
@@ -360,7 +363,6 @@ elif st.session_state.page == 'Verwaltung':
 
     st.markdown("<hr>", unsafe_allow_html=True)
     
-    # Editor
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
     column_cfg = {
@@ -392,7 +394,7 @@ elif st.session_state.page == 'Verwaltung':
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']): st.image(curr['bild_pfad'], width=150)
         up = st.file_uploader("Foto", type=['jpg','png'])
-        if st.button("Foto speichern", use_container_width=True):
+        if st.button("Foto speichern", type="primary", use_container_width=True):
             if up:
                 np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
