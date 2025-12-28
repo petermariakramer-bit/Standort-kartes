@@ -94,7 +94,6 @@ st.markdown("""
     }
 
     /* 3. MENÜ BUTTON */
-    /* Den Menü-Button oben rechts stylen */
     div.stButton > button {
         border: none;
         background: transparent;
@@ -137,29 +136,24 @@ st.markdown("""
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
     
-    /* Sidebar verstecken */
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
 # --- HEADER & NAVIGATION ---
-
-# Layout: Titel links, Menü-Button rechts
 c_head_title, c_head_btn = st.columns([6, 1])
 
 with c_head_title:
     st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 
 with c_head_btn:
-    # Der Toggle-Button: Ändert den Status von 'menu_open'
-    # Wir nutzen ein einfaches Text-Zeichen, das geht immer.
     btn_label = "✖️" if st.session_state.menu_open else "☰"
     if st.button(btn_label, key="menu_toggle", use_container_width=True):
         toggle_menu()
         st.rerun()
 
-# --- MENÜ INHALT (Wird nur angezeigt, wenn offen) ---
+# --- MENÜ INHALT ---
 if st.session_state.menu_open:
     with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
@@ -181,8 +175,8 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_manual_nav")
-geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+geolocator = Nominatim(user_agent="dialog_app_importer")
+geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5) # Etwas langsamer für Sicherheit beim Import
 
 def load_data():
     cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad", "baujahr", "hersteller"]
@@ -300,7 +294,104 @@ if st.session_state.page == 'Übersicht':
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
-    # Tabelle
+    # IMPORT SECTION (NEU)
+    with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
+        st.info("Lade eine Tabelle hoch (.ods oder .xlsx). Die Spalten werden automatisch erkannt.")
+        uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
+        
+        if uploaded_file and st.button("Import starten"):
+            try:
+                # 1. Datei lesen
+                if uploaded_file.name.endswith(".csv"):
+                    df_new = pd.read_csv(uploaded_file)
+                elif uploaded_file.name.endswith(".ods"):
+                    df_new = pd.read_excel(uploaded_file, engine="odf")
+                else:
+                    df_new = pd.read_excel(uploaded_file)
+                
+                # 2. Spalten finden (Case-Insensitive Suche)
+                # Wir suchen nach Schlüsselwörtern in den Spaltennamen der hochgeladenen Datei
+                file_cols = [c.lower() for c in df_new.columns]
+                
+                # Mapping Helper
+                def get_col_data(keywords):
+                    for i, col_name in enumerate(file_cols):
+                        for kw in keywords:
+                            if kw in col_name:
+                                return df_new.iloc[:, i]
+                    return None
+
+                # Daten extrahieren
+                import_nummer = get_col_data(["nummer", "nr.", "standort"])
+                import_bund = get_col_data(["bundes", "b-nr"])
+                import_str = get_col_data(["straße", "strasse", "adr"])
+                import_plz = get_col_data(["plz", "post"])
+                import_stadt = get_col_data(["stadt", "ort", "bezirk"])
+                import_baujahr = get_col_data(["baujahr", "jahr"])
+                import_hersteller = get_col_data(["hersteller", "firma"])
+                
+                count_imported = 0
+                progress_bar = st.progress(0)
+                
+                # 3. Daten in unsere Struktur überführen
+                for idx in range(len(df_new)):
+                    new_id = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}" # Unique ID generieren
+                    
+                    val_nummer = str(import_nummer.iloc[idx]) if import_nummer is not None else ""
+                    val_bund = str(import_bund.iloc[idx]) if import_bund is not None else ""
+                    val_str = str(import_str.iloc[idx]) if import_str is not None else ""
+                    val_plz = str(import_plz.iloc[idx]) if import_plz is not None else ""
+                    val_stadt = str(import_stadt.iloc[idx]) if import_stadt is not None else "Berlin" # Default Berlin
+                    val_bau = str(import_baujahr.iloc[idx]) if import_baujahr is not None else ""
+                    val_her = str(import_hersteller.iloc[idx]) if import_hersteller is not None else ""
+                    
+                    # Cleanup strings
+                    if val_nummer == "nan": val_nummer = ""
+                    if val_bund == "nan": val_bund = ""
+                    
+                    # 4. Geocoding (Automatisch Koordinaten suchen)
+                    lat, lon = 0.0, 0.0
+                    if val_str and val_stadt:
+                        try:
+                            address_query = f"{val_str}, {val_plz} {val_stadt}"
+                            loc = geocode(address_query)
+                            if loc:
+                                lat, lon = loc.latitude, loc.longitude
+                        except:
+                            pass
+                    
+                    # Row erstellen
+                    new_row = pd.DataFrame({
+                        "id": [new_id],
+                        "nummer": [val_nummer],
+                        "bundesnummer": [val_bund],
+                        "strasse": [val_str],
+                        "plz": [val_plz],
+                        "stadt": [val_stadt],
+                        "typ": ["Dialog Display"],
+                        "letzte_kontrolle": [datetime.date.today()],
+                        "breitengrad": [lat],
+                        "laengengrad": [lon],
+                        "bild_pfad": [""],
+                        "baujahr": [val_bau],
+                        "hersteller": [val_her]
+                    })
+                    
+                    df = pd.concat([df, new_row], ignore_index=True)
+                    count_imported += 1
+                    progress_bar.progress(min(idx / len(df_new), 1.0))
+                
+                save_data(df)
+                st.success(f"{count_imported} Einträge erfolgreich importiert!")
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"Fehler beim Import: {e}")
+                st.info("Bitte stelle sicher, dass 'odfpy' installiert ist: pip install odfpy")
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
+    # Tabelle Editor
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
     column_cfg = {
@@ -312,7 +403,9 @@ elif st.session_state.page == 'Verwaltung':
         "stadt": st.column_config.TextColumn("Ort"), "nummer": st.column_config.TextColumn("Nr."),
         "bundesnummer": st.column_config.TextColumn("B-Nr"),
         "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
-        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
+        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f"),
+        "hersteller": st.column_config.TextColumn("Hersteller"),
+        "baujahr": st.column_config.TextColumn("Baujahr")
     }
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
