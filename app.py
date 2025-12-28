@@ -146,11 +146,12 @@ st.markdown("<div style='height: 1px; background-color: #e5e5ea; margin-top: 15p
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_mobile_v3")
+geolocator = Nominatim(user_agent="dialog_app_final_v4")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
-    cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad"]
+    # HIER SIND DIE NEUEN SPALTEN: 'baujahr', 'hersteller'
+    cols = ["id", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad", "bild_pfad", "baujahr", "hersteller"]
     
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
@@ -163,7 +164,7 @@ def load_data():
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
     
-    text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad"]
+    text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
         if col in df.columns:
             df[col] = df[col].astype(str).replace("nan", "").apply(lambda x: x.replace(".0", "") if x.endswith(".0") else x)
@@ -195,11 +196,14 @@ if st.session_state.page == 'Übersicht':
             
         st.markdown("---")
         
+        # DETAILS ANZEIGEN
         c_det1, c_det2 = st.columns(2)
         with c_det1:
             st.markdown(f"**Typ:** {entry['typ']}")
-            st.markdown(f"**Letzte Kontrolle:** {entry['letzte_kontrolle']}")
+            st.markdown(f"**Hersteller:** {entry['hersteller']}") # NEU
+            st.markdown(f"**Baujahr:** {entry['baujahr']}")       # NEU
         with c_det2:
+            st.markdown(f"**Letzte Kontrolle:** {entry['letzte_kontrolle']}")
             st.markdown(f"**Koordinaten:** {float(entry['breitengrad']):.5f}, {float(entry['laengengrad']):.5f}")
 
         if entry['breitengrad'] != 0:
@@ -296,11 +300,14 @@ elif st.session_state.page == 'Verwaltung':
         "strasse": st.column_config.TextColumn("Straße"), "plz": st.column_config.TextColumn("PLZ"), 
         "stadt": st.column_config.TextColumn("Stadt"), "nummer": st.column_config.TextColumn("Nr."),
         "bundesnummer": st.column_config.TextColumn("B-Nr."),
+        # NEUE SPALTEN IN DER TABELLE
+        "hersteller": st.column_config.TextColumn("Hersteller"),
+        "baujahr": st.column_config.TextColumn("Baujahr"),
         "breitengrad": st.column_config.NumberColumn("Lat", format="%.5f"),
         "laengengrad": st.column_config.NumberColumn("Lon", format="%.5f")
     }
 
-    col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "letzte_kontrolle", "breitengrad", "laengengrad"]
+    col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
 
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
@@ -348,6 +355,12 @@ elif st.session_state.page == 'Neuer Eintrag':
         plz = col_plz.text_input("PLZ", placeholder="10115")
         stadt = col_stadt.text_input("Stadt", placeholder="Berlin")
         
+        # NEUE EINGABEFELDER
+        st.markdown("---")
+        c_her, c_bau = st.columns(2)
+        hersteller = c_her.text_input("Hersteller")
+        baujahr = c_bau.text_input("Baujahr")
+        
         st.markdown("<br>", unsafe_allow_html=True)
         uploaded_img = st.file_uploader("Foto (Optional)", type=['png', 'jpg'])
         
@@ -382,7 +395,8 @@ elif st.session_state.page == 'Neuer Eintrag':
                 "id": [new_id], "nummer": [nummer], "bundesnummer": [bundesnummer], 
                 "strasse": [strasse], "plz": [plz], "stadt": [stadt],
                 "typ": [typ], "letzte_kontrolle": [letzte_kontrolle],
-                "breitengrad": [final_lat], "laengengrad": [final_lon], "bild_pfad": [img_path]
+                "breitengrad": [final_lat], "laengengrad": [final_lon], "bild_pfad": [img_path],
+                "hersteller": [hersteller], "baujahr": [baujahr]
             })
             save_data(pd.concat([df, new_row], ignore_index=True))
             st.success("Gespeichert!")
