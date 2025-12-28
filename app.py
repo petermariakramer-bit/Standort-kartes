@@ -61,81 +61,60 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header ausblenden und Platz oben schaffen */
+    /* Header ausblenden (Streamlit Standard Header) */
     header {visibility: hidden;}
+    
+    /* WICHTIG: Padding oben, damit unser Menü sichtbar ist */
     .block-container { 
-        padding-top: 1rem !important; 
-        padding-left: 0.5rem !important; 
-        padding-right: 0.5rem !important; 
+        padding-top: 2rem !important; 
+        padding-left: 1rem !important; 
+        padding-right: 1rem !important; 
         max-width: 100% !important; 
     }
 
-    /* 2. STICKY HEADER CONTAINER */
-    /* Dieser Container klebt oben und hält Titel und Icons */
-    div[data-testid="stVerticalBlock"] > div:first-child {
-        position: sticky;
-        top: 0;
-        z-index: 999;
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px); /* Apple Milchglas-Effekt */
-        border-bottom: 1px solid #e5e5ea;
-        padding-top: 10px;
-        padding-bottom: 10px;
-        margin-top: -60px; /* Zieht es ganz nach oben in den Hidden Header Bereich */
-    }
-
-    /* 3. MOBILE LAYOUT FIX (Kein Umbruch der Icons!) */
+    /* 2. MOBILE LAYOUT FIX */
+    /* Zwingt Spalten (Columns) dazu, nebeneinander zu bleiben (nicht stapeln!) */
     div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important; /* WICHTIG: Zwingt Elemente nebeneinander */
+        flex-wrap: nowrap !important;
         align-items: center !important;
         white-space: nowrap !important;
     }
 
-    /* 4. TITEL */
+    /* 3. TITEL */
     .app-title {
         font-size: 22px; 
         font-weight: 700; 
         color: #000000 !important;
         margin: 0;
-        padding-left: 5px;
+        white-space: nowrap;
     }
 
-    /* 5. NAVIGATION ICONS BUTTONS */
-    /* Wir stylen die Buttons im Header speziell */
-    .nav-btn button {
-        background-color: transparent !important;
-        border: none !important;
-        color: #0071e3 !important; /* Blau */
-        font-size: 22px !important;
-        padding: 0px 5px !important;
-        margin: 0 !important;
-        line-height: 1 !important;
-        box-shadow: none !important;
-    }
-    .nav-btn button:hover {
-        color: #005bb5 !important;
-    }
-    /* Aktiver Button (optional dunkler) */
-    .nav-btn-active button {
-        background-color: #f0f0f0 !important;
-        border-radius: 50%;
-    }
-
-    /* 6. LISTE (Einträge) */
-    .address-text {
-        font-size: 13px; color: #86868b !important; 
-        margin-top: -2px; line-height: 1.3; 
+    /* 4. NAVIGATION ICONS */
+    /* Container für die Buttons, damit sie zentriert sind */
+    div.stButton > button {
+        width: 100%;
+        border: none;
+        background: transparent;
+        box-shadow: none;
     }
     
-    /* Buttons in der Liste (Linksbündig) */
-    div[data-testid="stVerticalBlock"] button {
-        text-align: left !important;
+    /* Icons größer machen */
+    .nav-icon {
+        font-size: 24px;
+        text-align: center;
+        cursor: pointer;
     }
 
+    /* 5. LISTE & DETAILS */
+    .address-text {
+        font-size: 13px; color: #86868b !important; 
+        margin-top: -5px; line-height: 1.3; 
+    }
+    
     /* Trennlinie */
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* 7. SEGMENTED CONTROL (Liste/Karte) */
+    /* 6. SEGMENTED CONTROL (Liste/Karte) */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
@@ -149,45 +128,42 @@ st.markdown("""
         background-color: #ffffff; color: #000 !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
     }
-
-    /* Verhindert horizontales Scrollen */
-    div[data-testid="stAppViewContainer"] {
-        overflow-x: hidden;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- HEADER NAVIGATION ---
-# Container für den Sticky Header
-with st.container():
-    # Spaltenverhältnis: Titel bekommt viel Platz, Icons rechts festen kleinen Platz.
-    # [5, 1, 1, 1] verhindert, dass sie zu breit werden.
-    c_title, c_home, c_manage, c_add = st.columns([5, 0.8, 0.8, 0.8])
+# --- HEADER NAVIGATION (Robust) ---
+# Wir platzieren das Menü direkt am Anfang der Seite ohne Sticky-Tricks.
 
-    with c_title:
-        st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
+# Layout: Titel (Links) | Platzhalter | Home | Verwaltung | Neu
+# [5, 1, 1, 1, 1] Verhältnis
+col_head = st.columns([5, 0.5, 1, 1, 1])
 
-    # Funktion für Button-Styling (Klasse hinzufügen hacky über leeren Container)
-    def nav_button(emoji, page_target, col):
-        with col:
-            # Container trick für CSS Klasse
-            st.markdown(f'<div class="nav-btn">', unsafe_allow_html=True)
-            if st.button(emoji, key=f"nav_{page_target}", use_container_width=True):
-                set_page(page_target)
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+with col_head[0]:
+    st.markdown('<div class="app-title">Dialog Displays</div>', unsafe_allow_html=True)
 
-    nav_button("🏠", "Übersicht", c_home)
-    nav_button("⚙️", "Verwaltung", c_manage)
-    nav_button("➕", "Neuer Eintrag", c_add)
+# Icons als Buttons. Wir nutzen Emoji-Buttons, weil die am stabilsten sind.
+with col_head[2]:
+    if st.button("🏠", key="nav_home", use_container_width=True):
+        set_page("Übersicht")
+        st.rerun()
 
-# Kleiner Abstand nach dem Header
-st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+with col_head[3]:
+    if st.button("⚙️", key="nav_manage", use_container_width=True):
+        set_page("Verwaltung")
+        st.rerun()
+
+with col_head[4]:
+    if st.button("➕", key="nav_add", use_container_width=True):
+        set_page("Neuer Eintrag")
+        st.rerun()
+
+# Trennlinie unter dem Header
+st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 10px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
 # --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="dialog_app_mobile_final")
+geolocator = Nominatim(user_agent="dialog_app_mobile_final_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
 def load_data():
@@ -265,7 +241,7 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button mit CSS Styling für Link-Look
+                            # Der Name ist der Button
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -277,7 +253,6 @@ if st.session_state.page == 'Übersicht':
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 st.image(row['bild_pfad'], use_container_width=True)
                                 
-                    # Trennlinie
                     st.markdown("<hr style='margin: 8px 0; border-color: #f0f0f0;'>", unsafe_allow_html=True)
             else:
                 st.info("Keine Einträge.")
@@ -295,7 +270,6 @@ if st.session_state.page == 'Übersicht':
             for _, row in df.iterrows():
                 if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
                     c = "blue" if row['typ'] == "Dialog Display" else "gray"
-                    # Kleines Bild im Popup
                     img_html = ""
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                         b64 = get_image_base64(row['bild_pfad'])
