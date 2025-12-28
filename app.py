@@ -24,7 +24,7 @@ if 'menu_open' not in st.session_state:
     st.session_state.menu_open = False
 
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [52.51, 13.48] # Berlin Lichtenberg Koordinaten ca.
+    st.session_state.map_center = [52.51, 13.48] # Berlin Lichtenberg
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 13
 
@@ -59,7 +59,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (STICKY HEADER) ---
+# --- CSS DESIGN (STABIL) ---
 st.markdown("""
     <style>
     /* 1. GLOBAL RESET */
@@ -69,112 +69,98 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Header (Standard Streamlit) ausblenden */
+    /* Header ausblenden */
     header {visibility: hidden;}
     
-    /* 2. INHALT NACH UNTEN SCHIEBEN */
-    /* Da der Header jetzt "fixed" ist (schwebt), muss der Inhalt Platz machen */
     .block-container { 
-        padding-top: 5rem !important; /* Platz für den Sticky Header */
+        padding-top: 1rem !important; 
         padding-left: 1rem !important; 
         padding-right: 1rem !important; 
         max-width: 100% !important; 
     }
 
-    /* 3. STICKY HEADER CONTAINER DEFINIEREN */
-    /* Wir zielen auf den ERSTEN Container im Hauptbereich */
-    div[data-testid="stVerticalBlock"] > div:first-child {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        background-color: rgba(255, 255, 255, 0.98); /* Fast deckendes Weiß */
-        z-index: 99999; /* Immer ganz oben */
-        border-bottom: 1px solid #e5e5ea;
-        padding-top: 15px;
-        padding-bottom: 10px;
-        padding-left: 15px;
-        padding-right: 15px;
-    }
-
-    /* 4. HEADER ELEMENTE */
+    /* 2. TITEL */
     .app-title {
-        font-size: 22px; 
+        font-size: 24px; 
         font-weight: 700; 
         color: #000000 !important;
         margin: 0;
-        line-height: 2.5rem;
+        white-space: nowrap;
+        padding-top: 5px;
     }
 
-    /* Menü Button Styling */
+    /* 3. MENÜ BUTTON */
     div.stButton > button {
         border: none;
         background: transparent;
         box-shadow: none;
-        float: right; /* Rechtsbündig */
-        font-size: 24px !important;
-        padding-top: 0px;
-        padding-bottom: 0px;
-        color: #0071e3 !important;
+        float: right;
+        font-size: 22px !important;
     }
     div.stButton > button:hover {
-        color: #005bb5 !important;
+        background: #f5f5f7;
     }
 
-    /* 5. MENÜ BOX (DROPDOWN) */
+    /* 4. MENÜ CONTAINER */
     .menu-box {
         background-color: #fbfbfd;
-        border-radius: 0 0 12px 12px;
+        border-radius: 12px;
         padding: 15px;
-        margin-top: -10px; /* Verbindet sich optisch mit Header */
-        border-bottom: 1px solid #e5e5ea;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         margin-bottom: 20px;
+        border: 1px solid #e5e5ea;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
 
-    /* 6. LISTE STYLING */
+    /* 5. LISTE */
     .address-text {
         font-size: 13px; color: #86868b !important; 
         margin-top: -5px; line-height: 1.3; 
     }
     hr { margin: 0; border-color: #e5e5ea; }
     
-    /* Segmented Control Fix */
+    /* Segmented Control */
     div.row-widget.stRadio > div {
         flex-direction: row; background-color: #f2f2f7; padding: 2px;
         border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
     }
+    div.row-widget.stRadio > div > label {
+        background-color: transparent; border: none; padding: 5px 0px;
+        border-radius: 7px; margin: 0; width: 50%; text-align: center;
+        justify-content: center; cursor: pointer; font-weight: 500; color: #666 !important;
+    }
+    div.row-widget.stRadio > div > label[data-checked="true"] {
+        background-color: #ffffff; color: #000 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15); font-weight: 600;
+    }
     
-    /* Sidebar weg */
+    /* Sidebar verstecken */
     section[data-testid="stSidebar"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- HEADER ---
-# Dieser Container wird durch das CSS oben "fixed" gemacht
-c_head_container = st.container()
+# --- HEADER & NAVIGATION (STABIL) ---
+# Wir nutzen Spalten statt CSS-Hacks, damit nichts überlappt.
 
-with c_head_container:
-    # Layout: Titel (Links) ----- Button (Rechts)
-    # [8, 1] sorgt dafür, dass der Button ganz rechts klebt
-    col1, col2 = st.columns([8, 1])
-    
-    with col1:
-        st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
-    
-    with col2:
-        # Toggle Button
-        icon = "✖️" if st.session_state.menu_open else "☰"
-        if st.button(icon, key="menu_btn"):
-            toggle_menu()
-            st.rerun()
+# Layout: Titel (groß) | Button (klein, rechts)
+c_head_title, c_head_btn = st.columns([7, 1])
 
-    # --- MENÜ INHALT (Wird direkt unter dem Header angezeigt) ---
-    if st.session_state.menu_open:
+with c_head_title:
+    st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
+
+with c_head_btn:
+    # Toggle Button
+    icon = "✖️" if st.session_state.menu_open else "☰"
+    if st.button(icon, key="menu_toggle", use_container_width=True):
+        toggle_menu()
+        st.rerun()
+
+# --- MENÜ INHALT ---
+if st.session_state.menu_open:
+    with st.container():
         st.markdown('<div class="menu-box">', unsafe_allow_html=True)
+        st.caption("Navigation")
         
-        # Navigation Buttons
         c_m1, c_m2, c_m3 = st.columns(3)
         with c_m1:
             if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
@@ -182,13 +168,16 @@ with c_head_container:
             if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
         with c_m3:
             if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-        
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
 
-# --- DATEN ---
+st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
+
+# --- DATEN LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_app_sticky")
+geolocator = Nominatim(user_agent="berlin_app_stable")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -196,15 +185,19 @@ def load_data():
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
+    
     df = pd.read_csv(CSV_FILE)
     for col in cols:
         if col not in df.columns: df[col] = ""
+    
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
+    
     text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
         if col in df.columns:
             df[col] = df[col].astype(str).replace("nan", "").apply(lambda x: x.replace(".0", "") if x.endswith(".0") else x)
+
     return df
 
 def save_data(df):
@@ -212,14 +205,13 @@ def save_data(df):
 
 df = load_data()
 
-
-# --- HAUPTINHALT ---
+# --- CONTENT ---
 
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL ANSICHT
-        if st.button("← Zurück zur Liste", use_container_width=True):
+        if st.button("← Zurück", type="secondary", use_container_width=True):
             st.session_state.detail_id = None
             st.rerun()
             
@@ -248,15 +240,17 @@ if st.session_state.page == 'Übersicht':
             st_folium(m_detail, width="100%", height=250)
 
     else:
-        # ÜBERSICHT (Liste / Karte)
+        # LISTE / KARTE SWITCH
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
+                    # LISTENEINTRAG
                     with st.container():
                         col_txt, col_img = st.columns([3.5, 1])
+                        
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
@@ -278,6 +272,7 @@ if st.session_state.page == 'Übersicht':
 
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
+            
             if st.session_state.map_zoom == 13 and not df.empty:
                 valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
                 if not valid.empty:
@@ -301,6 +296,7 @@ if st.session_state.page == 'Übersicht':
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
+    # IMPORT
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
         if uploaded_file and st.button("Import starten"):
@@ -324,6 +320,7 @@ elif st.session_state.page == 'Verwaltung':
                 imp_bau = get_col(["baujahr", "jahr"])
                 imp_her = get_col(["hersteller", "firma"])
                 
+                count = 0
                 for idx in range(len(df_new)):
                     nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
                     v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
@@ -344,14 +341,16 @@ elif st.session_state.page == 'Verwaltung':
                     
                     new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her]})
                     df = pd.concat([df, new_row], ignore_index=True)
+                    count += 1
                 
                 save_data(df)
-                st.success("Import fertig!")
+                st.success(f"{count} Einträge importiert!")
                 st.rerun()
             except Exception as e: st.error(f"Fehler: {e}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
     
+    # Editor
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
     column_cfg = {
@@ -359,7 +358,8 @@ elif st.session_state.page == 'Verwaltung':
         "id": None, "bild_pfad": None,
         "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
         "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
-        "strasse": st.column_config.TextColumn("Str"), "nummer": st.column_config.TextColumn("Nr."),
+        "strasse": st.column_config.TextColumn("Str"), "plz": st.column_config.TextColumn("PLZ"), 
+        "stadt": st.column_config.TextColumn("Ort"), "nummer": st.column_config.TextColumn("Nr."),
         "bundesnummer": st.column_config.TextColumn("B-Nr"),
         "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
         "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
@@ -367,7 +367,7 @@ elif st.session_state.page == 'Verwaltung':
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Speichern", type="primary", use_container_width=True):
+    if st.button("💾 Tabelle speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
