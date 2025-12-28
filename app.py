@@ -56,98 +56,92 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (ULTIMATE FIX) ---
+# --- CSS DESIGN (FORCE WHITE BACKGROUND) ---
 st.markdown("""
     <style>
-    /* 1. GLOBAL RESET */
-    .stApp { background-color: #ffffff !important; }
-    html, body, p, div, label, h1, h2, h3, .stMarkdown, span, li {
-        color: #000000 !important;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+    /* 1. THEME FORCE LIGHT */
+    :root {
+        --primary-color: #0071e3;
+        --background-color: #ffffff;
+        --secondary-background-color: #fbfbfd;
+        --text-color: #000000;
+        --font: -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    header {visibility: hidden;}
-    
-    .block-container { 
-        padding-top: 2rem !important; 
-        padding-left: 1rem !important; 
-        padding-right: 1rem !important; 
-        max-width: 100% !important; 
-    }
-
-    /* 2. BUTTON FIX (HINTERGRUND WEISS ERZWINGEN) */
-    /* Wir setzen den Hintergrund auf WEISS statt transparent, um schwarze Blöcke zu verhindern */
-    div.stButton > button {
+    .stApp {
         background-color: #ffffff !important;
-        color: #000000 !important;
+    }
+    
+    /* Header weg */
+    header {visibility: hidden;}
+    .block-container { padding-top: 1.5rem !important; }
+
+    /* 2. BUTTONS ZWINGEN WEISS ZU SEIN */
+    /* Wir setzen den Hintergrund hart auf Weiß (#ffffff). Nicht transparent. */
+    
+    div.stButton > button {
+        background-color: #ffffff !important; 
+        color: #0071e3 !important; /* Apple Blau für Links */
         border: none !important;
         box-shadow: none !important;
-        text-shadow: none !important;
-        background-image: none !important; /* Wichtig gegen Farbverläufe */
-        padding: 5px !important;
+        text-align: left !important;
+        font-weight: 500 !important;
+        padding: 5px 0px !important; /* Weniger Padding */
+        height: auto !important;
+        min-height: 0px !important;
     }
 
-    /* Hover State */
+    /* Hover Status */
     div.stButton > button:hover {
         background-color: #ffffff !important;
-        color: #0071e3 !important; /* Blau beim Drüberfahren */
-        border: none !important;
-        box-shadow: none !important;
+        color: #005bb5 !important; /* Dunkleres Blau */
     }
 
-    /* Active/Focus State */
+    /* Active/Focus Status */
     div.stButton > button:active, div.stButton > button:focus {
         background-color: #ffffff !important;
-        color: #0071e3 !important;
         border: none !important;
         box-shadow: none !important;
+        color: #0071e3 !important;
     }
 
-    /* 3. PRIMARY BUTTONS (Ausnahme für wichtige Buttons) */
-    /* Diese Buttons sollen sichtbar bleiben (Blau mit weißem Text) */
+    /* 3. PRIMARY BUTTONS (SPEICHERN) - Die sollen Blau sein */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
-        border-radius: 8px !important;
+        text-align: center !important;
         padding: 10px 20px !important;
+        border-radius: 8px !important;
         margin-top: 10px !important;
-        border: none !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #005bb5 !important;
-        color: #ffffff !important;
     }
 
-    /* 4. LAYOUT ANPASSUNGEN */
+    /* 4. MENÜ BUTTON RECHTS */
+    /* Der Toggle Button bekommt extra Styling */
+    div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+        text-align: right !important;
+        font-size: 24px !important;
+        color: #000000 !important; /* Menü Icon Schwarz */
+        width: 100%;
+    }
+
+    /* 5. TITEL */
     .app-title {
-        font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
-    }
-    
-    /* Menü Box Styling */
-    .menu-box {
-        background-color: #fbfbfd;
-        border: 1px solid #e5e5ea;
-        border-radius: 12px;
-        padding: 10px;
-        margin-top: 10px;
-        margin-bottom: 20px;
-    }
-    
-    /* Links bündige Buttons in der Liste */
-    .list-btn-container button {
-        text-align: left !important;
-        width: 100% !important;
+        font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
     }
 
+    /* 6. TEXTE */
     .address-text {
-        font-size: 13px; color: #666666 !important; 
-        margin-top: -5px; line-height: 1.3; 
+        font-size: 13px; color: #666666 !important; margin-top: -8px; line-height: 1.3; 
     }
-    hr { margin: 0; border-color: #e5e5ea; }
     
+    hr { margin: 5px 0 10px 0; border-color: #f0f0f0; }
+    
+    /* Segmented Control */
     div.row-widget.stRadio > div {
-        flex-direction: row; background-color: #f2f2f7; padding: 2px;
-        border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
+        background-color: #f2f2f7; border-radius: 8px; justify-content: center;
     }
     
     section[data-testid="stSidebar"] { display: none; }
@@ -156,37 +150,34 @@ st.markdown("""
 
 
 # --- HEADER ---
-c_head_title, c_head_btn = st.columns([7, 1])
-
-with c_head_title:
+c1, c2 = st.columns([7, 1])
+with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
-
-with c_head_btn:
-    icon = "✖️" if st.session_state.menu_open else "☰"
-    if st.button(icon, key="menu_toggle"):
+with c2:
+    # Menü Button
+    label = "✖️" if st.session_state.menu_open else "☰"
+    if st.button(label, key="menu_main"):
         toggle_menu()
         st.rerun()
 
 # --- MENÜ ---
 if st.session_state.menu_open:
-    with st.container():
-        st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-        # Wir nutzen Columns im Menü für bessere Struktur
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1:
-            if st.button("🏠 Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
-        with c_m2:
-            if st.button("⚙️ Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
-        with c_m3:
-            if st.button("➕ Neu", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<div style='background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
+    c_m1, c_m2, c_m3 = st.columns(3)
+    with c_m1:
+        if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
+    with c_m2:
+        if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
+    with c_m3:
+        if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+st.markdown("<hr>", unsafe_allow_html=True)
 
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_white_bg")
+geolocator = Nominatim(user_agent="berlin_white_v2")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -217,10 +208,9 @@ if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
         # DETAIL
-        c_back, c_dummy = st.columns([1,4])
+        c_back, c_x = st.columns([1,3])
         with c_back:
-            # Hier nutzen wir keinen Primary Button, damit er sich ins Design einfügt
-            if st.button("← Zurück", key="back_btn"):
+            if st.button("← Zurück"): 
                 st.session_state.detail_id = None
                 st.rerun()
             
@@ -249,7 +239,7 @@ if st.session_state.page == 'Übersicht':
             st_folium(m_detail, width="100%", height=250)
 
     else:
-        # LISTE / KARTE
+        # LISTE
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -263,12 +253,10 @@ if st.session_state.page == 'Übersicht':
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Wir fügen eine Klasse hinzu, um Links-Alignierung zu erzwingen
-                            st.markdown('<div class="list-btn-container">', unsafe_allow_html=True)
+                            # Button -> Sollte jetzt weißer Hintergrund mit blauem Text sein
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
-                            st.markdown('</div>', unsafe_allow_html=True)
                             
                             addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
@@ -277,7 +265,7 @@ if st.session_state.page == 'Übersicht':
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 st.image(row['bild_pfad'], use_container_width=True)
                                 
-                    st.markdown("<hr style='margin: 8px 0; border-color: #f0f0f0;'>", unsafe_allow_html=True)
+                    st.markdown("<hr>", unsafe_allow_html=True)
             else:
                 st.info("Keine Einträge.")
 
@@ -297,7 +285,6 @@ if st.session_state.page == 'Übersicht':
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                         b64 = get_image_base64(row['bild_pfad'])
                         if b64: img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; border-radius:6px; margin-bottom:5px;">'
-                    
                     popup = f"<div style='width:160px; font-family:sans-serif;'>{img_html}<b>{row['nummer']}</b><br>{row['strasse']}</div>"
                     folium.Marker([row['breitengrad'], row['laengengrad']], popup=folium.Popup(popup, max_width=200), icon=folium.Icon(color=c, icon="info-sign")).add_to(m)
             
@@ -308,7 +295,7 @@ elif st.session_state.page == 'Verwaltung':
     
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten", type="primary"): # Primary Button (Blau)
+        if uploaded_file and st.button("Import starten", type="primary"):
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
@@ -375,7 +362,7 @@ elif st.session_state.page == 'Verwaltung':
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
     
-    if st.button("💾 Speichern", type="primary", use_container_width=True): # Primary Button
+    if st.button("💾 Speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
@@ -390,7 +377,7 @@ elif st.session_state.page == 'Verwaltung':
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']): st.image(curr['bild_pfad'], width=150)
         up = st.file_uploader("Foto", type=['jpg','png'])
-        if st.button("Foto speichern", type="primary", use_container_width=True): # Primary Button
+        if st.button("Foto speichern", type="primary", use_container_width=True):
             if up:
                 np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
@@ -421,7 +408,7 @@ elif st.session_state.page == 'Neuer Eintrag':
         typ = c_typ.selectbox("Typ", ["Dialog Display", "Ohne"])
         letzte_kontrolle = c_dat.date_input("Datum", datetime.date.today())
         
-        if st.form_submit_button("Speichern", type="primary", use_container_width=True): # Primary Button
+        if st.form_submit_button("Speichern", type="primary", use_container_width=True):
             final_lat, final_lon = 0.0, 0.0
             new_id = pd.Timestamp.now().strftime('%Y%m%d%H%M%S')
             img_path = save_uploaded_image(uploaded_img, new_id) if uploaded_img else ""
