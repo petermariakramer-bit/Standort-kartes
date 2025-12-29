@@ -96,10 +96,6 @@ st.markdown("""
         /* Dies trifft oft den Zurück Button, wenn er links oben ist */
     }
     
-    /* Da Streamlit CSS Klassen schwer greifbar sind, nutzen wir Inline-Stylinglogik im Code
-       oder überschreiben "Secondary" Buttons global nicht so hart, wenn möglich. 
-       Hier der Fix für den spezifischen Zurück-Button via Attribut-Selektor funktioniert oft: */
-       
     div.stButton button[kind="secondary"]:disabled {
         background-color: #eee !important;
     }
@@ -143,7 +139,7 @@ st.markdown("""
 
 # --- DATA LOGIC ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_tabs_fix")
+geolocator = Nominatim(user_agent="berlin_import_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -196,7 +192,6 @@ with tab_home:
         # Zurück Button mit Custom Styling Injection (Outline Look)
         st.markdown("""
             <style>
-            /* Wir zielen auf den ersten Button in diesem Tab */
             div.stButton.back-btn > button {
                 background-color: #ffffff !important;
                 color: #555555 !important;
@@ -213,21 +208,16 @@ with tab_home:
             </style>
         """, unsafe_allow_html=True)
 
-        # Container für den Button
         c_back, c_dummy = st.columns([1, 4])
         with c_back:
-            # Wir geben dem Button keinen speziellen Key, der das CSS kaputt macht,
-            # sondern nutzen die Reihenfolge.
             if st.button("⬅ Zurück", key="back_btn"):
                 st.session_state.detail_id = None
                 st.rerun()
         
-        # Daten laden
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         status_raw = str(entry['status'])
         is_defekt = status_raw == "Defekt"
         
-        # Inhalt
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         
         status_color = "#ff3b30" if is_defekt else "#34c759"
@@ -337,9 +327,6 @@ with tab_admin:
         new_lat = c_v2.number_input("Lat:", value=curr_lat, format="%.5f")
         new_lon = c_v2.number_input("Lon:", value=curr_lon, format="%.5f")
         
-        # Speichern Button hier soll "primary" (rot) oder "secondary" (grün) sein? 
-        # Wir wollen ihn Blau (Standard Primary im Theme, aber wir haben Primary Rot überschrieben).
-        # Trick: Wir nehmen Secondary und stylen ihn inline.
         if st.button("Speichern", key="save_admin", use_container_width=True):
             df.at[row_idx, 'status'] = new_status
             df.at[row_idx, 'breitengrad'] = new_lat
@@ -354,49 +341,62 @@ with tab_admin:
 
     with st.expander("📂 Datei importieren", expanded=False):
         uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten"):
-            try:
-                if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
-                elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
-                else: df_new = pd.read_excel(uploaded_file, dtype=str)
-                file_cols = [c.lower() for c in df_new.columns]
-                def get_col(kws):
-                    for i, c in enumerate(file_cols):
-                        for kw in kws:
-                            if kw in c: return df_new.iloc[:, i]
-                    return None
-                imp_nr = get_col(["nummer", "nr.", "standort"])
-                imp_b = get_col(["bundes", "b-nr"])
-                imp_s = get_col(["straße", "strasse", "adr"])
-                imp_plz = get_col(["plz", "post"])
-                imp_ort = get_col(["stadt", "ort", "bezirk"])
-                imp_bau = get_col(["baujahr", "jahr"])
-                imp_her = get_col(["hersteller", "firma"])
-                count = 0
-                for idx in range(len(df_new)):
-                    nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
-                    v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
-                    v_b = str(imp_b.iloc[idx]) if imp_b is not None else ""
-                    v_s = str(imp_s.iloc[idx]) if imp_s is not None else ""
-                    v_p = str(imp_plz.iloc[idx]) if imp_plz is not None else ""
-                    v_o = str(imp_ort.iloc[idx]) if imp_ort is not None else "Berlin"
-                    v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
-                    v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
-                    if v_nr == "nan": v_nr = ""
-                    lat, lon = 0.0, 0.0
+        
+        # IMPORT FIX: Wir prüfen erst, ob eine Datei da ist, und führen dann den Import aus
+        if uploaded_file is not None:
+            if st.button("Import starten", key="start_import", type="secondary"):
+                with st.spinner("Importiere Daten..."):
                     try:
-                        loc = geocode(f"{v_s}, {v_p} {v_o}")
-                        if loc: lat, lon = loc.latitude, loc.longitude
-                    except: pass
-                    new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
-                    df = pd.concat([df, new_row], ignore_index=True)
-                    count += 1
-                save_data(df)
-                st.success(f"{count} Einträge importiert!")
-                st.rerun()
-            except Exception as e: st.error(f"Fehler: {e}")
+                        if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
+                        elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
+                        else: df_new = pd.read_excel(uploaded_file, dtype=str)
+                        
+                        file_cols = [c.lower() for c in df_new.columns]
+                        def get_col(kws):
+                            for i, c in enumerate(file_cols):
+                                for kw in kws:
+                                    if kw in c: return df_new.iloc[:, i]
+                            return None
+                        
+                        imp_nr = get_col(["nummer", "nr.", "standort"])
+                        imp_b = get_col(["bundes", "b-nr"])
+                        imp_s = get_col(["straße", "strasse", "adr"])
+                        imp_plz = get_col(["plz", "post"])
+                        imp_ort = get_col(["stadt", "ort", "bezirk"])
+                        imp_bau = get_col(["baujahr", "jahr"])
+                        imp_her = get_col(["hersteller", "firma"])
+                        
+                        count = 0
+                        for idx in range(len(df_new)):
+                            nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
+                            v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
+                            v_b = str(imp_b.iloc[idx]) if imp_b is not None else ""
+                            v_s = str(imp_s.iloc[idx]) if imp_s is not None else ""
+                            v_p = str(imp_plz.iloc[idx]) if imp_plz is not None else ""
+                            v_o = str(imp_ort.iloc[idx]) if imp_ort is not None else "Berlin"
+                            v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
+                            v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
+                            if v_nr == "nan": v_nr = ""
+                            
+                            lat, lon = 0.0, 0.0
+                            try:
+                                loc = geocode(f"{v_s}, {v_p} {v_o}")
+                                if loc: lat, lon = loc.latitude, loc.longitude
+                            except: pass
+                            
+                            new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
+                            df = pd.concat([df, new_row], ignore_index=True)
+                            count += 1
+                        
+                        save_data(df)
+                        st.success(f"{count} Einträge erfolgreich importiert!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Fehler beim Import: {e}")
     
     st.markdown("<hr>", unsafe_allow_html=True)
+    
     st.subheader("Datentabelle")
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
