@@ -56,13 +56,14 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (NO COLUMNS, PURE HTML) ---
+# --- CSS DESIGN ---
 st.markdown("""
     <style>
     /* 1. GRUNDEINSTELLUNGEN */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
+        --secondary-background-color: #f0f2f6;
         --text-color: #262730;
         --font: sans-serif;
     }
@@ -85,12 +86,12 @@ st.markdown("""
 
     /* 2. BUTTONS (STANDORT-BUTTON) */
     div.stButton > button:not([kind="primary"]) {
-        background-color: #f5f5f7 !important; /* Helles Grau */
+        background-color: #f5f5f7 !important;
         color: #000000 !important;
         border: 1px solid #e5e5ea !important;
         border-radius: 8px !important;
         box-shadow: none !important;
-        padding: 10px 0px !important;
+        padding: 8px 0px !important;
         margin: 0 !important;
         text-align: center !important;
         justify-content: center !important;
@@ -158,7 +159,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_html_layout")
+geolocator = Nominatim(user_agent="berlin_html_fix_v2")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -225,7 +226,7 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # 1. STANDORT BUTTON (Kopfzeile)
+                        # 1. BUTTON
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
@@ -233,48 +234,24 @@ if st.session_state.page == 'Übersicht':
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # 2. ADRESSE & BILD (HTML Layout - ROBUST)
-                        # Wir verzichten auf st.columns und nutzen Flexbox.
-                        # flex-shrink: 0 beim Bild ist der Schlüssel!
-                        
+                        # 2. ADRESSE & BILD (HTML)
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         
-                        img_html = ""
+                        # Bild-HTML vorbereiten (nur wenn Bild existiert)
+                        img_tag = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                             b64 = get_image_base64(row['bild_pfad'])
                             if b64:
-                                img_html = f'''
-                                <img src="data:image/jpeg;base64,{b64}" 
-                                     style="
-                                        width: 60px; 
-                                        height: 60px; 
-                                        object-fit: cover; 
-                                        border-radius: 6px; 
-                                        flex-shrink: 0; /* WICHTIG: Verhindert Schrumpfen */
-                                        margin-left: 10px;
-                                     ">
-                                '''
+                                # Wir bauen den String als normalen f-String, damit er nicht kaputt geht
+                                img_tag = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
                         
-                        # Flexbox Container
+                        # Kompletter HTML Block
                         html_block = f"""
-                        <div style="
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: center; 
-                            margin-top: 5px; 
-                            padding: 0 5px;
-                            width: 100%;
-                        ">
-                            <div style="
-                                font-size: 13px; 
-                                color: #666; 
-                                line-height: 1.3; 
-                                flex-grow: 1; /* Nimmt den restlichen Platz */
-                                word-wrap: break-word; /* Text bricht um */
-                            ">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 5px; width: 100%;">
+                            <div style="font-size: 13px; color: #666; line-height: 1.3; flex-grow: 1; word-wrap: break-word;">
                                 {addr_text}
                             </div>
-                            {img_html}
+                            {img_tag}
                         </div>
                         """
                         st.markdown(html_block, unsafe_allow_html=True)
