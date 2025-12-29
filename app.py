@@ -14,14 +14,12 @@ st.set_page_config(
     page_title="Berlin Lichtenberg", 
     layout="wide", 
     page_icon="🐻",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed" # Menü ist standardmäßig zu (Hamburger Icon)
 )
 
 # --- SESSION STATE ---
 if 'page' not in st.session_state:
     st.session_state.page = 'Übersicht'
-if 'menu_open' not in st.session_state:
-    st.session_state.menu_open = False
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [52.51, 13.48] 
 if 'map_zoom' not in st.session_state:
@@ -34,10 +32,6 @@ if 'view_mode' not in st.session_state:
 def set_page(page_name):
     st.session_state.page = page_name
     st.session_state.detail_id = None
-    st.session_state.menu_open = False 
-
-def toggle_menu():
-    st.session_state.menu_open = not st.session_state.menu_open
 
 # --- HELPER ---
 DATA_FOLDER = 'data'
@@ -59,7 +53,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (STICKY HEADER & CLEANUP) ---
+# --- CSS DESIGN ---
 st.markdown("""
     <style>
     :root {
@@ -68,163 +62,98 @@ st.markdown("""
         --text-color: #000000;
         --font: sans-serif;
     }
-    .stApp { background-color: #ffffff !important; color: #000000 !important; overflow-x: hidden !important; }
+    .stApp { background-color: #ffffff !important; color: #000000 !important; }
     
-    /* Standard Header ausblenden */
+    /* Header ausblenden für Clean-Look */
     header {visibility: hidden;}
     
-    /* Container Padding anpassen, damit Inhalt unter den Sticky Header rutscht */
     .block-container { 
-        padding-top: 0rem !important; /* Wir machen den Abstand im Sticky Header selbst */
-        padding-left: 0.5rem !important; 
-        padding-right: 0.5rem !important; 
-        max-width: 100vw !important; 
-        overflow-x: hidden !important;
-    }
-
-    /* -----------------------------------------------------------
-       STICKY HEADER LOGIK
-       Wir fixieren den Container, der unseren Header hält.
-    ----------------------------------------------------------- */
-    
-    /* Dieser Selektor zielt auf den ersten Bereich der App ab (unseren Header) */
-    div[data-testid="stVerticalBlock"] > div:first-child {
-        position: sticky;
-        top: 0;
-        z-index: 9999;
-        background-color: rgba(255, 255, 255, 0.95); /* Leicht transparentes Weiß */
-        backdrop-filter: blur(10px); /* Apple-like Blur Effekt */
-        padding-top: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #f0f0f0;
-        margin-bottom: 1rem;
-    }
-
-    /* Mobile Header Layout: Immer nebeneinander */
-    div[data-testid="stHorizontalBlock"] {
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        gap: 0 !important;
-    }
-    
-    div[data-testid="column"] {
-        min-width: 0 !important;
+        padding-top: 1.5rem !important; 
+        padding-left: 1rem !important; 
+        padding-right: 1rem !important; 
+        max-width: 100vw !important;
     }
 
     /* --- BUTTONS --- */
     
-    /* Standard (Grün) */
+    /* Standard (Grün - Liste) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #34c759 !important; 
         color: #ffffff !important;
         border: none !important;
         border-radius: 8px !important;
-        padding: 10px 0px !important;
+        padding: 12px 0px !important; /* Etwas höher für Touch */
         width: 100% !important;
+        font-size: 16px !important;
         font-weight: 700 !important;
     }
     
-    /* Primary (Rot) */
+    /* Primary (Rot - Defekt) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; 
         color: #ffffff !important;
         border: none !important;
-        padding: 10px 20px !important;
+        padding: 12px 0px !important;
         border-radius: 8px !important;
         font-weight: 700 !important;
     }
 
-    /* --- AUSNAHMEN --- */
-    
-    /* Menü Button (Transparent) */
-    div[data-testid="column"]:last-child div.stButton > button:not([kind="primary"]) {
-        background-color: transparent !important;
-        color: #000000 !important;
-        width: auto !important;
-        float: right !important;
-        padding: 0 !important;
-        font-size: 26px !important;
-    }
-
-    /* Menü-Box Buttons (Grau) */
-    .menu-box div.stButton > button:not([kind="primary"]) {
+    /* Sidebar Buttons (Neutralisieren) */
+    section[data-testid="stSidebar"] div.stButton > button {
         background-color: #f0f0f5 !important;
         color: #000000 !important;
         border: 1px solid #e5e5ea !important;
-        font-weight: 600 !important;
+        font-weight: 500 !important;
     }
 
-    /* Zurück Button (Outline Style) */
-    .back-btn-container div.stButton > button {
-        background-color: #ffffff !important;
-        color: #333333 !important;
-        border: 1px solid #cccccc !important;
-        box-shadow: none !important;
-        width: auto !important;
-        padding: 5px 15px !important;
-    }
-
+    /* "Zurück"-Button (Outline Grau) */
+    /* Wir nutzen eine CSS-Klasse 'back-button', die wir im HTML Wrapper setzen */
+    
     .app-title { 
-        font-size: 24px; font-weight: 800; color: #000000 !important; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        font-size: 26px; 
+        font-weight: 800; 
+        color: #000000 !important; 
+        margin-bottom: 10px;
     }
-    @media (max-width: 450px) { .app-title { font-size: 20px !important; } }
-
-    hr { margin: 10px 0; border-color: #f0f0f0; }
-    section[data-testid="stSidebar"] { display: none; }
-    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 8px; justify-content: center; margin-top: 5px; }
+    
+    hr { margin: 15px 0; border-color: #f0f0f0; }
+    
+    /* Radio Buttons hübscher */
+    div.row-widget.stRadio > div { 
+        flex-direction: row; 
+        background-color: #f2f2f7; 
+        padding: 4px; 
+        border-radius: 10px; 
+        justify-content: center; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- LOGIK HEADER SICHTBARKEIT ---
-# Menü Button anzeigen?
-# JA, wenn: Wir sind NICHT im Detail-Modus UND NICHT im Karten-Modus (außer Verwaltung)
-is_detail = st.session_state.detail_id is not None
-is_map = st.session_state.view_mode == 'Karte'
-is_overview_page = st.session_state.page == 'Übersicht'
-
-# Wenn wir auf der Übersicht sind, aber im Detail oder auf der Karte -> Kein Menü Button
-hide_menu_btn = is_overview_page and (is_detail or is_map)
-
-
-# --- HEADER RENDERING (STICKY CONTAINER) ---
-header_container = st.container()
-
-with header_container:
-    if hide_menu_btn:
-        # Kein Button -> Volle Breite für Titel
-        st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
-        # Sicherstellen, dass Menü zu ist
-        if st.session_state.menu_open:
-            st.session_state.menu_open = False
-    else:
-        # Mit Button -> Spalten [8, 2]
-        c1, c2 = st.columns([8, 2])
-        with c1:
-            st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
-        with c2:
-            label = "✖️" if st.session_state.menu_open else "☰"
-            if st.button(label, key="menu_main"):
-                toggle_menu()
-                st.rerun()
-
-    # Menü Inhalt (auch Sticky, wenn offen)
-    if st.session_state.menu_open and not hide_menu_btn:
-        st.markdown('<div class="menu-box" style="margin-top:10px;">', unsafe_allow_html=True)
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1:
-            if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
-        with c_m2:
-            if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
-        with c_m3:
-            if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+# --- NAVIGATION (SIDEBAR) ---
+with st.sidebar:
+    st.markdown("### Menü")
+    if st.button("🏠 Übersicht", use_container_width=True): 
+        set_page("Übersicht")
+        st.rerun()
+    if st.button("⚙️ Verwaltung", use_container_width=True): 
+        set_page("Verwaltung")
+        st.rerun()
+    if st.button("➕ Neuer Eintrag", use_container_width=True): 
+        set_page("Neuer Eintrag")
+        st.rerun()
+    
+    st.markdown("---")
+    st.info("Nutze den Pfeil oben links, um dieses Menü zu schließen.")
 
 
-# --- DATA ---
+# --- TITEL (IMMER SICHTBAR) ---
+st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
+
+
+# --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_sticky_fix")
+geolocator = Nominatim(user_agent="berlin_sidebar_solution")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -263,22 +192,35 @@ df = load_data()
 
 # --- CONTENT ---
 
-# Kleiner Abstand nach dem Sticky Header, damit Inhalt nicht verdeckt wird (optisch)
-st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL ANSICHT
+        # --- DETAIL ANSICHT ---
         
-        # Zurück Button in speziellen Container für CSS Styling
-        st.markdown('<div class="back-btn-container">', unsafe_allow_html=True)
-        c_back, c_x = st.columns([1,3])
-        with c_back:
+        # Zurück Button: Wir nutzen hier KEIN st.columns, um Stacking zu vermeiden.
+        # Einfach ein Button ganz oben.
+        # Wir überschreiben das Design für diesen einen Button lokal.
+        st.markdown("""
+            <style>
+            div.stButton.back-btn > button {
+                background-color: white !important;
+                color: #555 !important;
+                border: 1px solid #ddd !important;
+                width: auto !important;
+                display: inline-block !important;
+                padding: 5px 20px !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Key 'back_btn' wird durch obiges CSS nicht direkt erfasst (Streamlit Limitation),
+        # aber da es der erste Button im Flow ist, wirkt das CSS oft nicht spezifisch genug.
+        # TRICK: Wir nutzen columns nur für den Button, um ihn klein zu halten.
+        cb1, cb2 = st.columns([1, 4])
+        with cb1:
             if st.button("⬅ Zurück", key="back_btn"): 
                 st.session_state.detail_id = None
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         status_raw = str(entry['status'])
@@ -317,25 +259,18 @@ if st.session_state.page == 'Übersicht':
             st.warning("⚠️ Keine GPS-Koordinaten hinterlegt.")
 
     else:
-        # LISTE / KARTE
+        # --- LISTEN ANSICHT ---
+        mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
-        new_mode = st.radio("Ansicht", ["Liste", "Karte"], 
-                            horizontal=True, 
-                            label_visibility="collapsed",
-                            key="view_mode_selector",
-                            index=0 if st.session_state.view_mode == "Liste" else 1)
-        
-        if new_mode != st.session_state.view_mode:
-            st.session_state.view_mode = new_mode
-            st.rerun()
-        
-        if st.session_state.view_mode == "Liste":
+        if mode == "Liste":
             if not df.empty:
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
+                        
+                        # Button Style (Primary=Rot, Secondary=Grün)
                         btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -358,7 +293,7 @@ if st.session_state.page == 'Übersicht':
             else:
                 st.info("Keine Einträge.")
 
-        elif st.session_state.view_mode == "Karte":
+        elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             valid_geo = df[(df['breitengrad'] != 0.0) & (df['laengengrad'] != 0.0)]
             if st.session_state.map_zoom == 12 and not valid_geo.empty:
@@ -416,7 +351,7 @@ elif st.session_state.page == 'Verwaltung':
 
     with st.expander("📂 Datei importieren", expanded=False):
         uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten", type="secondary"):
+        if uploaded_file and st.button("Import starten"):
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
