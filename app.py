@@ -56,10 +56,10 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (MOBILE COLUMN RESCUE) ---
+# --- CSS DESIGN (CARD LAYOUT) ---
 st.markdown("""
     <style>
-    /* 1. THEME & GLOBAL */
+    /* 1. FORCE LIGHT THEME & SETTINGS */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
@@ -84,49 +84,43 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* 2. SPALTEN LAYOUT (DER FIX) */
+    /* 2. SPALTEN LAYOUT */
     div[data-testid="stHorizontalBlock"] {
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 0.5rem !important;
     }
     
-    /* Die letzte Spalte (das Bild oder Menü-Button) bekommt eine Mindestbreite.
-       Dadurch kann sie nicht auf 0 geschrumpft werden. */
-    div[data-testid="column"]:last-child {
-        min-width: 70px !important; 
-        flex-shrink: 0 !important; /* Verbietet Schrumpfen */
-    }
-    
-    /* Die erste Spalte (Text) darf schrumpfen, wenn es eng wird */
-    div[data-testid="column"]:first-child {
-        min-width: 0px !important;
+    /* Spalten Verhalten */
+    div[data-testid="column"] {
+        min-width: 0 !important;
         flex-shrink: 1 !important;
-        overflow: hidden !important;
     }
 
-    /* 3. BUTTONS */
+    /* 3. BUTTONS (MITTIG & CARD STYLE) */
     div.stButton > button:not([kind="primary"]) {
-        background-color: #ffffff !important; 
+        background-color: #f9f9f9 !important; /* Leicht grau abgesetzt */
         color: #000000 !important;
-        border: none !important;
+        border: 1px solid #e5e5ea !important;
+        border-radius: 8px !important;
         box-shadow: none !important;
-        padding: 0px !important;
+        padding: 8px 0px !important;
         margin: 0 !important;
-        text-align: left !important;
         
-        /* Text-Kürzung */
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        /* ZENTRIERUNG */
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+        
         width: 100% !important;
-        display: block !important;
         font-size: 16px !important;
         font-weight: 600 !important;
     }
     
     div.stButton > button:not([kind="primary"]):hover {
+        background-color: #f0f0f5 !important;
         color: #0071e3 !important;
+        border-color: #0071e3 !important;
     }
 
     div.stButton > button[kind="primary"] {
@@ -143,14 +137,13 @@ st.markdown("""
     .address-text { 
         font-size: 13px; 
         color: #666666 !important; 
-        margin-top: 2px; 
-        line-height: 1.2; 
-        white-space: nowrap !important; 
-        overflow: hidden !important; 
-        text-overflow: ellipsis !important; 
+        margin-top: 5px; 
+        line-height: 1.3; 
+        padding-left: 5px; /* Abstand links */
     }
     
-    hr { margin: 8px 0; border-color: #f0f0f0; }
+    /* Trennlinie dünner */
+    hr { margin: 12px 0; border-color: #f0f0f0; }
 
     /* Menu Button right */
     div[data-testid="column"]:last-child button {
@@ -158,7 +151,7 @@ st.markdown("""
     }
 
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
-    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; white-space: normal !important; padding: 10px !important;}
+    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; text-align: left !important; background: white !important;}
     
     section[data-testid="stSidebar"] { display: none; }
     div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
@@ -167,7 +160,7 @@ st.markdown("""
 
 
 # --- HEADER ---
-c1, c2 = st.columns([6, 1]) # Verhältnis definiert, CSS erzwingt min-width für c2
+c1, c2 = st.columns([6, 1])
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 with c2:
@@ -189,7 +182,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_mobile_rescue")
+geolocator = Nominatim(user_agent="berlin_card_layout")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -256,29 +249,32 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # HIER: Wir nutzen [3, 1]. CSS sorgt dafür, dass die "1" (letzte Spalte)
-                        # mindestens 70px breit bleibt.
-                        col_txt, col_img = st.columns([3, 1])
+                        # 1. BUTTON (ZEILE 1 - VOLLE BREITE)
+                        label = f"{row['nummer']} - {row['bundesnummer']}"
+                        if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
-                        with col_txt:
-                            label = f"{row['nummer']} - {row['bundesnummer']}"
-                            if label.strip() in ["-", " - "]: label = "Ohne Nummer"
-                            
-                            if st.button(label, key=f"l_{row['id']}"):
-                                st.session_state.detail_id = row['id']
-                                st.rerun()
-                            
-                            addr = f"{row['strasse']}, {row['plz']} {row['stadt']}".strip()
+                        # use_container_width=True macht ihn so breit wie die Zeile
+                        if st.button(label, key=f"l_{row['id']}", use_container_width=True):
+                            st.session_state.detail_id = row['id']
+                            st.rerun()
+                        
+                        # 2. DETAILS DARUNTER (ZEILE 2 - Adresse Links, Bild Rechts)
+                        # Layout: Adresse [3 Teile] | Bild [1 Teil]
+                        c_addr, c_img = st.columns([3, 1])
+                        
+                        with c_addr:
+                            addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
                         
-                        with col_img:
+                        with c_img:
+                            # Kleines Bild, rechtsbündig im Container
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 b64 = get_image_base64(row['bild_pfad'])
                                 if b64:
                                     img_html = f'''
-                                        <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 60px;">
+                                        <div style="display: flex; justify-content: flex-end; align-items: flex-start; padding-top: 5px;">
                                             <img src="data:image/jpeg;base64,{b64}" 
-                                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
+                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                                         </div>
                                     '''
                                     st.markdown(img_html, unsafe_allow_html=True)
