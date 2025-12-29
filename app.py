@@ -139,7 +139,7 @@ st.markdown("""
 
 # --- DATA LOGIC ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_import_fix")
+geolocator = Nominatim(user_agent="berlin_form_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -189,7 +189,7 @@ with tab_home:
     if st.session_state.detail_id is not None:
         # --- DETAIL ANSICHT ---
         
-        # Zurück Button mit Custom Styling Injection (Outline Look)
+        # Custom Style für Zurück Button
         st.markdown("""
             <style>
             div.stButton.back-btn > button {
@@ -339,61 +339,61 @@ with tab_admin:
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
+    # --- IMPORT FIX (MIT FORMULAR) ---
     with st.expander("📂 Datei importieren", expanded=False):
-        uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
-        
-        # IMPORT FIX: Wir prüfen erst, ob eine Datei da ist, und führen dann den Import aus
-        if uploaded_file is not None:
-            if st.button("Import starten", key="start_import", type="secondary"):
-                with st.spinner("Importiere Daten..."):
-                    try:
-                        if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
-                        elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
-                        else: df_new = pd.read_excel(uploaded_file, dtype=str)
+        # WICHTIG: Formular verhindert das Neuladen beim Button-Klick bevor die Datei verarbeitet ist
+        with st.form("import_form"):
+            uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
+            submit_import = st.form_submit_button("Import starten", type="secondary") # Secondary = Grün
+            
+            if submit_import and uploaded_file is not None:
+                try:
+                    if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
+                    elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
+                    else: df_new = pd.read_excel(uploaded_file, dtype=str)
+                    
+                    file_cols = [c.lower() for c in df_new.columns]
+                    def get_col(kws):
+                        for i, c in enumerate(file_cols):
+                            for kw in kws:
+                                if kw in c: return df_new.iloc[:, i]
+                        return None
+                    
+                    imp_nr = get_col(["nummer", "nr.", "standort"])
+                    imp_b = get_col(["bundes", "b-nr"])
+                    imp_s = get_col(["straße", "strasse", "adr"])
+                    imp_plz = get_col(["plz", "post"])
+                    imp_ort = get_col(["stadt", "ort", "bezirk"])
+                    imp_bau = get_col(["baujahr", "jahr"])
+                    imp_her = get_col(["hersteller", "firma"])
+                    
+                    count = 0
+                    for idx in range(len(df_new)):
+                        nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
+                        v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
+                        v_b = str(imp_b.iloc[idx]) if imp_b is not None else ""
+                        v_s = str(imp_s.iloc[idx]) if imp_s is not None else ""
+                        v_p = str(imp_plz.iloc[idx]) if imp_plz is not None else ""
+                        v_o = str(imp_ort.iloc[idx]) if imp_ort is not None else "Berlin"
+                        v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
+                        v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
+                        if v_nr == "nan": v_nr = ""
                         
-                        file_cols = [c.lower() for c in df_new.columns]
-                        def get_col(kws):
-                            for i, c in enumerate(file_cols):
-                                for kw in kws:
-                                    if kw in c: return df_new.iloc[:, i]
-                            return None
+                        lat, lon = 0.0, 0.0
+                        try:
+                            loc = geocode(f"{v_s}, {v_p} {v_o}")
+                            if loc: lat, lon = loc.latitude, loc.longitude
+                        except: pass
                         
-                        imp_nr = get_col(["nummer", "nr.", "standort"])
-                        imp_b = get_col(["bundes", "b-nr"])
-                        imp_s = get_col(["straße", "strasse", "adr"])
-                        imp_plz = get_col(["plz", "post"])
-                        imp_ort = get_col(["stadt", "ort", "bezirk"])
-                        imp_bau = get_col(["baujahr", "jahr"])
-                        imp_her = get_col(["hersteller", "firma"])
-                        
-                        count = 0
-                        for idx in range(len(df_new)):
-                            nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
-                            v_nr = str(imp_nr.iloc[idx]) if imp_nr is not None else ""
-                            v_b = str(imp_b.iloc[idx]) if imp_b is not None else ""
-                            v_s = str(imp_s.iloc[idx]) if imp_s is not None else ""
-                            v_p = str(imp_plz.iloc[idx]) if imp_plz is not None else ""
-                            v_o = str(imp_ort.iloc[idx]) if imp_ort is not None else "Berlin"
-                            v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
-                            v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
-                            if v_nr == "nan": v_nr = ""
-                            
-                            lat, lon = 0.0, 0.0
-                            try:
-                                loc = geocode(f"{v_s}, {v_p} {v_o}")
-                                if loc: lat, lon = loc.latitude, loc.longitude
-                            except: pass
-                            
-                            new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
-                            df = pd.concat([df, new_row], ignore_index=True)
-                            count += 1
-                        
-                        save_data(df)
-                        st.success(f"{count} Einträge erfolgreich importiert!")
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"Fehler beim Import: {e}")
+                        new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
+                        df = pd.concat([df, new_row], ignore_index=True)
+                        count += 1
+                    
+                    save_data(df)
+                    st.success(f"{count} Einträge erfolgreich importiert! Bitte Seite neu laden.")
+                    
+                except Exception as e:
+                    st.error(f"Fehler beim Import: {e}")
     
     st.markdown("<hr>", unsafe_allow_html=True)
     
