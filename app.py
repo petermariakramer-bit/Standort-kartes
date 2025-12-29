@@ -56,7 +56,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (NO SCROLL FIX) ---
+# --- CSS DESIGN (MOBILE OPTIMIZED) ---
 st.markdown("""
     <style>
     /* 1. FORCE LIGHT THEME & NO SCROLL */
@@ -68,60 +68,65 @@ st.markdown("""
         --font: sans-serif;
     }
     
-    /* Verhindert horizontales Scrollen global */
     .stApp { 
         background-color: #ffffff !important; 
         color: #000000 !important;
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
+        overflow-x: hidden !important; /* Verhindert Scrollen */
     }
     
     header {visibility: hidden;}
+    
+    /* Container Padding reduziert */
     .block-container { 
-        padding-top: 1.5rem !important; 
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 100% !important;
+        padding-top: 1rem !important; 
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        max-width: 100vw !important;
         overflow-x: hidden !important;
     }
 
-    /* 2. MOBILE SPALTEN LAYOUT (Fixed Widths) */
+    /* 2. MOBILE LISTE FIX (Spalten nebeneinander) */
     div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
+        flex-wrap: nowrap !important; /* Zwingt Spalten in eine Zeile */
         align-items: center !important;
-        gap: 0.5rem !important; /* Kleinerer Abstand verhindert Overflow */
         width: 100% !important;
+        gap: 0 !important; /* Kein Gap per Flex, wir nutzen Padding */
     }
     
-    /* Spalten Verhalten */
+    /* Spalten müssen schrumpfen dürfen */
     div[data-testid="column"] {
-        min-width: 0 !important; /* Erlaubt Schrumpfen */
+        min-width: 0px !important; 
         flex-shrink: 1 !important;
-        overflow: hidden !important; /* Schneidet zu langen Text ab */
+        flex-grow: 1 !important;
+        overflow: hidden !important; /* Schneidet Überlauf ab */
     }
 
-    /* 3. BUTTONS CLEAN STYLE */
+    /* 3. BUTTONS (Weißer Hintergrund + Text-Kürzung) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important; 
         color: #000000 !important;
-        border: 1px solid #f0f0f0 !important;
+        border: none !important; /* Rahmen weg für cleaneren Look */
         box-shadow: none !important;
-        padding: 8px 4px !important;
+        padding: 0px !important; /* Kein Padding im Button */
         margin: 0 !important;
         text-align: left !important;
+        
+        /* Text abschneiden mit ... wenn zu lang */
         white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important; /* Pünktchen bei zu langem Text */
+        text-overflow: ellipsis !important;
         width: 100% !important;
         display: block !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
     }
+    
     div.stButton > button:not([kind="primary"]):hover {
-        background-color: #f9f9f9 !important;
         color: #0071e3 !important;
-        border-color: #0071e3 !important;
+        background-color: transparent !important;
     }
 
-    /* Primary Buttons */
+    /* Primary Buttons (Speichern) */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -130,10 +135,20 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* 4. LAYOUT & TEXT */
+    /* 4. TEXT & LAYOUT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
-    .address-text { font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    hr { margin: 8px 0; border-color: #e5e5ea; }
+    
+    /* Adresse bricht um, damit Seite nicht breit wird */
+    .address-text { 
+        font-size: 13px; 
+        color: #666666 !important; 
+        margin-top: 2px; 
+        line-height: 1.2; 
+        word-wrap: break-word !important; 
+        white-space: normal !important; 
+    }
+    
+    hr { margin: 8px 0; border-color: #f0f0f0; }
 
     /* Menu Button right */
     div[data-testid="column"]:nth-of-type(2) button {
@@ -142,7 +157,7 @@ st.markdown("""
 
     /* Menu Box */
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
-    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; white-space: normal !important; }
+    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; white-space: normal !important; padding: 10px !important;}
     
     section[data-testid="stSidebar"] { display: none; }
     
@@ -153,7 +168,6 @@ st.markdown("""
 
 
 # --- HEADER ---
-# Wir nutzen Columns, um den Titel und das Menü zu trennen
 c1, c2 = st.columns([7, 1])
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
@@ -176,7 +190,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_noscroll")
+geolocator = Nominatim(user_agent="berlin_mobile_final_v2")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -243,9 +257,9 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # HIER ZWINGEN WIR DAS LAYOUT:
-                        # Wir geben dem Text 75% Platz und dem Bild 25% (feste Ratios helfen gegen Scrollen)
-                        col_txt, col_img = st.columns([3, 1])
+                        # HIER IST DIE MAGIE: gap="small" und Verhältnis 4:1
+                        # Bild ist klein (60px), Text hat Platz.
+                        col_txt, col_img = st.columns([4, 1], gap="small")
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -255,18 +269,18 @@ if st.session_state.page == 'Übersicht':
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
                             
-                            addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
+                            addr = f"{row['strasse']}, {row['plz']} {row['stadt']}".strip()
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
                         
                         with col_img:
-                            # Das Bild-HTML: Feste Größe, sauberer Container
+                            # BILD: Fest auf 60px Breite/Höhe
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 b64 = get_image_base64(row['bild_pfad'])
                                 if b64:
                                     img_html = f'''
-                                        <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; overflow: hidden;">
+                                        <div style="display: flex; justify-content: flex-end; align-items: flex-start; width: 100%;">
                                             <img src="data:image/jpeg;base64,{b64}" 
-                                                 style="width: 75px; height: 75px; object-fit: cover; border-radius: 6px;">
+                                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
                                         </div>
                                     '''
                                     st.markdown(img_html, unsafe_allow_html=True)
