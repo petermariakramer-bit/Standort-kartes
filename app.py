@@ -70,11 +70,11 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; max-width: 100vw !important; overflow-x: hidden !important;}
 
-    /* BUTTONS (GRÜN = OK) */
+    /* 1. BUTTONS STANDARD (FUNKTIONSTÜCHTIG -> GRÜN HINTERLEGT) */
     div.stButton > button:not([kind="primary"]) {
-        background-color: #ffffff !important;
-        color: #34c759 !important; /* Grün */
-        border: 1px solid #34c759 !important;
+        background-color: #34c759 !important; /* Grün */
+        color: #ffffff !important;           /* Weiß */
+        border: none !important;
         border-radius: 8px !important;
         box-shadow: none !important;
         padding: 10px 0px !important;
@@ -86,37 +86,50 @@ st.markdown("""
         font-size: 16px !important;
         font-weight: 700 !important;
     }
+    div.stButton > button:not([kind="primary"]):hover {
+        background-color: #2da84e !important; /* Dunkleres Grün bei Hover */
+    }
     
-    /* BUTTONS (ROT = DEFEKT) */
+    /* 2. BUTTONS PRIMARY (DEFEKT -> ROT HINTERLEGT) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; /* Rot */
-        color: #ffffff !important;
+        color: #ffffff !important;           /* Weiß */
         border: none !important;
         padding: 10px 20px !important;
         border-radius: 8px !important;
         font-weight: 700 !important;
     }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #d70015 !important;
+    }
 
-    /* NEUTRALE BUTTONS (Menü etc.) */
-    div[data-testid="column"]:last-child button:not([kind="primary"]) {
-        float: right; 
-        font-size: 24px !important; 
-        color: #000000 !important; 
-        border: none !important; 
-        background: transparent !important; 
+    /* 3. AUSNAHMEN (HEADER & MENÜ) */
+    
+    /* Menü-Toggle oben rechts (soll transparent/schwarz sein, nicht grün) */
+    div[data-testid="column"]:last-child div.stButton > button:not([kind="primary"]) {
+        background-color: transparent !important;
+        color: #000000 !important;
         width: auto !important;
     }
 
-    .menu-box button { 
-        width: 100% !important; 
-        border: none !important;
-        border-bottom: 1px solid #f0f0f0 !important; 
-        border-radius: 0px !important; 
-        text-align: left !important; 
-        background: white !important;
-        color: #000000 !important; 
+    /* Navigations-Buttons im Menü (sollen grau/schwarz sein, nicht grün) */
+    .menu-box div.stButton > button:not([kind="primary"]) {
+        background-color: #f0f0f5 !important;
+        color: #000000 !important;
+        border: 1px solid #e5e5ea !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
     }
 
+    /* "Zurück"-Button (machen wir grau statt grün, damit er nicht wie ein Status aussieht) */
+    div[data-testid="column"] div.stButton > button:not([kind="primary"]) {
+        /* Dies fängt den Zurück Button ab, falls er nicht in der Liste ist. 
+           Da die Liste Full-Width Buttons nutzt, ist das hier tricky. 
+           Wir lassen den Zurück Button grün oder geben ihm einen key und stylen ihn separat.
+           Fürs erste lassen wir ihn im Standard-Grün-Look der App. */
+    }
+
+    /* LAYOUT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
     hr { margin: 15px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
@@ -138,17 +151,25 @@ with c2:
 # --- MENÜ ---
 if st.session_state.menu_open:
     st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-    if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
-    if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
-    if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+    
+    # HIER: Wieder 3 Spalten (Columns) für die Menüpunkte nebeneinander
+    c_m1, c_m2, c_m3 = st.columns(3)
+    
+    with c_m1:
+        if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
+    with c_m2:
+        if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
+    with c_m3:
+        if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+        
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
-# --- LOGIK (FIX FÜR KOORDINATEN) ---
+# --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_safe_load")
+geolocator = Nominatim(user_agent="berlin_final_design_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -160,18 +181,14 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    # 1. STATUS SÄUBERN
+    # Status säubern
     if "status" in df.columns:
         df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip().str.capitalize()
         df["status"] = df["status"].replace(["Nan", "", "None"], "Funktionstüchtig")
     
-    # 2. KOORDINATEN RETTEN (SICHERES PARSING)
-    # Hier verhindern wir, dass Daten gelöscht werden, wenn sie Kommas enthalten
-    for coord_col in ["breitengrad", "laengengrad"]:
-        if coord_col in df.columns:
-            # Zu String wandeln, Komma durch Punkt ersetzen, dann zu Zahl
-            df[coord_col] = df[coord_col].astype(str).str.replace(',', '.', regex=False)
-            df[coord_col] = pd.to_numeric(df[coord_col], errors='coerce').fillna(0.0)
+    # Koordinaten
+    df["breitengrad"] = pd.to_numeric(df["breitengrad"], errors='coerce').fillna(0.0)
+    df["laengengrad"] = pd.to_numeric(df["laengengrad"], errors='coerce').fillna(0.0)
 
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
@@ -195,9 +212,10 @@ df = load_data()
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL ANSICHT
+        # DETAIL
         c_back, c_x = st.columns([1,3])
         with c_back:
+            # Dieser Button wird jetzt auch grün sein (da secondary). Das passt zum Design-System.
             if st.button("← Zurück", key="back_btn"): 
                 st.session_state.detail_id = None
                 st.rerun()
@@ -207,10 +225,8 @@ if st.session_state.page == 'Übersicht':
         status_raw = str(entry['status'])
         is_defekt = status_raw == "Defekt"
         
-        # Titel (Clean)
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         
-        # Status Anzeige
         status_color = "#ff3b30" if is_defekt else "#34c759"
         icon_symbol = "⚠️" if is_defekt else "✅"
         st.markdown(
@@ -232,28 +248,21 @@ if st.session_state.page == 'Übersicht':
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
             
-        # KARTE (Sichere Anzeige)
+        # Karte
         lat = float(entry['breitengrad'])
         lon = float(entry['laengengrad'])
-        
         if lat != 0.0 and lon != 0.0:
             st.markdown("### Karte")
-            
             m_color = "red" if is_defekt else "green"
             m_icon = "exclamation-sign" if is_defekt else "ok-sign"
-            
             m_detail = folium.Map(location=[lat, lon], zoom_start=16, tiles="OpenStreetMap")
-            folium.Marker(
-                [lat, lon], 
-                icon=folium.Icon(color=m_color, icon=m_icon)
-            ).add_to(m_detail)
-            
+            folium.Marker([lat, lon], icon=folium.Icon(color=m_color, icon=m_icon)).add_to(m_detail)
             st_folium(m_detail, width="100%", height=250)
         else:
             st.warning("⚠️ Keine GPS-Koordinaten verfügbar.")
 
     else:
-        # LISTE / KARTE
+        # LISTE
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -264,6 +273,7 @@ if st.session_state.page == 'Übersicht':
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
                         
+                        # Defekt -> Primary (Rot). OK -> Secondary (Grün durch CSS)
                         btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -278,16 +288,11 @@ if st.session_state.page == 'Übersicht':
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                             b64 = get_image_base64(row['bild_pfad'])
                             if b64:
+                                # Safe HTML String
                                 img_tag = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
                         
-                        html_code = textwrap.dedent(f"""
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 5px; width: 100%;">
-                                <div style="font-size: 13px; color: #666; line-height: 1.3; flex-grow: 1; word-wrap: break-word;">
-                                    {addr_text}
-                                </div>
-                                {img_tag}
-                            </div>
-                        """)
+                        # HTML ohne Einrückung
+                        html_code = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; padding:0 5px; width:100%;"><div style="font-size:13px; color:#666; line-height:1.3; flex-grow:1; word-wrap:break-word;">{addr_text}</div>{img_tag}</div>'
                         st.markdown(html_code, unsafe_allow_html=True)
                     st.markdown("<hr>", unsafe_allow_html=True)
             else:
@@ -295,19 +300,15 @@ if st.session_state.page == 'Übersicht':
 
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
-            
             valid_geo = df[(df['breitengrad'] != 0.0) & (df['laengengrad'] != 0.0)]
             if st.session_state.map_zoom == 12 and not valid_geo.empty:
                 sw = valid_geo[['breitengrad', 'laengengrad']].min().values.tolist()
                 ne = valid_geo[['breitengrad', 'laengengrad']].max().values.tolist()
                 if sw != ne: m.fit_bounds([sw, ne])
-            
             for _, row in df.iterrows():
                 if row['breitengrad'] != 0.0 and row['laengengrad'] != 0.0:
-                    
                     st_val = str(row['status'])
                     is_defekt = st_val == "Defekt"
-                    
                     c = "red" if is_defekt else "green"
                     ic = "exclamation-sign" if is_defekt else "ok-sign"
                     
@@ -315,24 +316,15 @@ if st.session_state.page == 'Übersicht':
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                         b64 = get_image_base64(row['bild_pfad'])
                         if b64: img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; border-radius:6px; margin-bottom:5px;">'
-                    
                     popup_content = f"<div style='width:160px; font-family:sans-serif;'>{img_html}<b>{row['nummer']}</b><br>{row['strasse']}<br>Status: <b>{st_val}</b></div>"
-                    
-                    folium.Marker(
-                        [row['breitengrad'], row['laengengrad']], 
-                        popup=folium.Popup(popup_content, max_width=200), 
-                        icon=folium.Icon(color=c, icon=ic)
-                    ).add_to(m)
-            
+                    folium.Marker([row['breitengrad'], row['laengengrad']], popup=folium.Popup(popup_content, max_width=200), icon=folium.Icon(color=c, icon=ic)).add_to(m)
             st_folium(m, width="100%", height=600)
 
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
     
-    # 1. SCHNELL UPDATE
     st.subheader("Schnell-Update")
     st.markdown("<div style='background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee;'>", unsafe_allow_html=True)
-    
     if not df.empty:
         entry_options = {f"{r['nummer']} ({r['strasse']})": r['id'] for i, r in df.sort_values('nummer').iterrows()}
         selected_label = st.selectbox("Standort wählen:", list(entry_options.keys()))
@@ -340,46 +332,19 @@ elif st.session_state.page == 'Verwaltung':
         
         current_status = str(df.loc[df['id'] == selected_id, 'status'].values[0])
         idx_radio = 1 if current_status == "Defekt" else 0
-        
         new_status = st.radio("Status ändern:", ["Funktionstüchtig", "Defekt"], index=idx_radio, horizontal=True)
         
         if st.button("Status speichern", type="primary", use_container_width=True):
             idx = df.index[df['id'] == selected_id].tolist()[0]
             df.at[idx, 'status'] = new_status
             save_data(df)
-            st.success(f"Status für {selected_label} geändert.")
+            st.success(f"Status gespeichert: {new_status}")
             st.rerun()
     else:
         st.info("Keine Einträge.")
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # 2. TABELLE (Mit Koordinaten-Bearbeitung)
-    st.subheader("Datentabelle (Koordinaten fixen)")
-    edit_data = df.copy()
-    edit_data["Löschen?"] = False 
-    column_cfg = {
-        "Löschen?": st.column_config.CheckboxColumn("🗑️", width="small"),
-        "id": None, "bild_pfad": None,
-        "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
-        "status": st.column_config.SelectboxColumn("Status", options=["Funktionstüchtig", "Defekt"], required=True),
-        "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
-        "strasse": st.column_config.TextColumn("Str"),
-        "breitengrad": st.column_config.NumberColumn("Lat", format="%.5f"), # 5 Nachkommastellen für Präzision
-        "laengengrad": st.column_config.NumberColumn("Lon", format="%.5f")
-    }
-    col_order = ["Löschen?", "status", "nummer", "bundesnummer", "strasse", "plz", "stadt", "breitengrad", "laengengrad"]
-    edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
-    
-    if st.button("💾 Speichern", type="primary", use_container_width=True):
-        rows_to_keep = edited_df[edited_df["Löschen?"] == False]
-        save_data(rows_to_keep.drop(columns=["Löschen?"]))
-        st.success("Gespeichert!")
-        st.rerun()
-    
-    st.markdown("<hr>", unsafe_allow_html=True)
-    
-    # 3. IMPORT
     with st.expander("📂 Datei importieren", expanded=False):
         uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
         if uploaded_file and st.button("Import starten"):
@@ -411,13 +376,11 @@ elif st.session_state.page == 'Verwaltung':
                     v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
                     v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
                     if v_nr == "nan": v_nr = ""
-                    
                     lat, lon = 0.0, 0.0
                     try:
                         loc = geocode(f"{v_s}, {v_p} {v_o}")
                         if loc: lat, lon = loc.latitude, loc.longitude
                     except: pass
-                    
                     new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
                     df = pd.concat([df, new_row], ignore_index=True)
                     count += 1
@@ -425,8 +388,28 @@ elif st.session_state.page == 'Verwaltung':
                 st.success(f"{count} Einträge importiert!")
                 st.rerun()
             except Exception as e: st.error(f"Fehler: {e}")
-    
     st.markdown("<hr>", unsafe_allow_html=True)
+    
+    st.subheader("Datentabelle")
+    edit_data = df.copy()
+    edit_data["Löschen?"] = False 
+    column_cfg = {
+        "Löschen?": st.column_config.CheckboxColumn("🗑️", width="small"),
+        "id": None, "bild_pfad": None,
+        "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
+        "status": st.column_config.SelectboxColumn("Status", options=["Funktionstüchtig", "Defekt"], required=True),
+        "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
+        "strasse": st.column_config.TextColumn("Str"), "breitengrad": st.column_config.NumberColumn("Lat", format="%.5f"), "laengengrad": st.column_config.NumberColumn("Lon", format="%.5f")
+    }
+    col_order = ["Löschen?", "status", "nummer", "bundesnummer", "strasse", "plz", "stadt", "breitengrad", "laengengrad"]
+    edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
+    if st.button("💾 Speichern", type="primary", use_container_width=True):
+        rows_to_keep = edited_df[edited_df["Löschen?"] == False]
+        save_data(rows_to_keep.drop(columns=["Löschen?"]))
+        st.success("Gespeichert!")
+        st.rerun()
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
     st.subheader("Bild ändern")
     if not df.empty:
         opts = {f"{r['nummer']}": r['id'] for i, r in df.sort_values('nummer').iterrows()}
