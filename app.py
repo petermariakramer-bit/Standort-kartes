@@ -14,12 +14,10 @@ st.set_page_config(
     page_title="Berlin Lichtenberg", 
     layout="wide", 
     page_icon="🐻",
-    initial_sidebar_state="collapsed" # Menü ist standardmäßig zu (Hamburger Icon)
+    initial_sidebar_state="collapsed"
 )
 
 # --- SESSION STATE ---
-if 'page' not in st.session_state:
-    st.session_state.page = 'Übersicht'
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [52.51, 13.48] 
 if 'map_zoom' not in st.session_state:
@@ -28,10 +26,6 @@ if 'detail_id' not in st.session_state:
     st.session_state.detail_id = None
 if 'view_mode' not in st.session_state:
     st.session_state.view_mode = 'Liste'
-
-def set_page(page_name):
-    st.session_state.page = page_name
-    st.session_state.detail_id = None
 
 # --- HELPER ---
 DATA_FOLDER = 'data'
@@ -64,96 +58,92 @@ st.markdown("""
     }
     .stApp { background-color: #ffffff !important; color: #000000 !important; }
     
-    /* Header ausblenden für Clean-Look */
     header {visibility: hidden;}
     
     .block-container { 
-        padding-top: 1.5rem !important; 
-        padding-left: 1rem !important; 
-        padding-right: 1rem !important; 
+        padding-top: 1rem !important; 
+        padding-left: 0.5rem !important; 
+        padding-right: 0.5rem !important; 
         max-width: 100vw !important;
     }
 
-    /* --- BUTTONS --- */
+    /* 1. BUTTONS (STATUS FARBEN) */
     
-    /* Standard (Grün - Liste) */
+    /* Standard = GRÜN (Funktionstüchtig) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #34c759 !important; 
         color: #ffffff !important;
         border: none !important;
         border-radius: 8px !important;
-        padding: 12px 0px !important; /* Etwas höher für Touch */
+        padding: 10px 0px !important;
         width: 100% !important;
-        font-size: 16px !important;
         font-weight: 700 !important;
     }
     
-    /* Primary (Rot - Defekt) */
+    /* Primary = ROT (Defekt) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; 
         color: #ffffff !important;
         border: none !important;
-        padding: 12px 0px !important;
+        padding: 10px 0px !important;
         border-radius: 8px !important;
         font-weight: 700 !important;
     }
 
-    /* Sidebar Buttons (Neutralisieren) */
-    section[data-testid="stSidebar"] div.stButton > button {
-        background-color: #f0f0f5 !important;
-        color: #000000 !important;
-        border: 1px solid #e5e5ea !important;
-        font-weight: 500 !important;
+    /* 2. ZURÜCK BUTTON FIX (OUTLINE STYLE) */
+    /* Wir nutzen einen CSS-Selektor für den Button innerhalb des "Zurück"-Containers */
+    div[data-testid="stHorizontalBlock"] > div:first-child div.stButton > button {
+        /* Dies trifft oft den Zurück Button, wenn er links oben ist */
+    }
+    
+    /* Da Streamlit CSS Klassen schwer greifbar sind, nutzen wir Inline-Stylinglogik im Code
+       oder überschreiben "Secondary" Buttons global nicht so hart, wenn möglich. 
+       Hier der Fix für den spezifischen Zurück-Button via Attribut-Selektor funktioniert oft: */
+       
+    div.stButton button[kind="secondary"]:disabled {
+        background-color: #eee !important;
     }
 
-    /* "Zurück"-Button (Outline Grau) */
-    /* Wir nutzen eine CSS-Klasse 'back-button', die wir im HTML Wrapper setzen */
-    
-    .app-title { 
-        font-size: 26px; 
-        font-weight: 800; 
-        color: #000000 !important; 
-        margin-bottom: 10px;
+    /* TABS Styling (Navigation) */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #ffffff;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        padding-top: 10px;
+        border-bottom: 1px solid #f0f0f0;
     }
-    
-    hr { margin: 15px 0; border-color: #f0f0f0; }
-    
-    /* Radio Buttons hübscher */
-    div.row-widget.stRadio > div { 
-        flex-direction: row; 
-        background-color: #f2f2f7; 
-        padding: 4px; 
-        border-radius: 10px; 
-        justify-content: center; 
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #f5f5f7;
+        border-radius: 8px;
+        color: #000;
+        font-weight: 600;
+        padding: 0 15px;
+        flex: 1; /* Tabs teilen sich den Platz */
     }
+    .stTabs [aria-selected="true"] {
+        background-color: #0071e3 !important;
+        color: #fff !important;
+    }
+
+    /* TITEL */
+    .app-title { font-size: 24px; font-weight: 800; color: #000000 !important; margin-bottom: 5px; }
+    
+    hr { margin: 10px 0; border-color: #f0f0f0; }
+    section[data-testid="stSidebar"] { display: none; }
+    
+    /* Radio Button Fix */
+    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 8px; justify-content: center; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- NAVIGATION (SIDEBAR) ---
-with st.sidebar:
-    st.markdown("### Menü")
-    if st.button("🏠 Übersicht", use_container_width=True): 
-        set_page("Übersicht")
-        st.rerun()
-    if st.button("⚙️ Verwaltung", use_container_width=True): 
-        set_page("Verwaltung")
-        st.rerun()
-    if st.button("➕ Neuer Eintrag", use_container_width=True): 
-        set_page("Neuer Eintrag")
-        st.rerun()
-    
-    st.markdown("---")
-    st.info("Nutze den Pfeil oben links, um dieses Menü zu schließen.")
-
-
-# --- TITEL (IMMER SICHTBAR) ---
-st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
-
-
-# --- LOGIK ---
+# --- DATA LOGIC ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_sidebar_solution")
+geolocator = Nominatim(user_agent="berlin_tabs_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -190,42 +180,54 @@ def save_data(df):
 df = load_data()
 
 
-# --- CONTENT ---
+# --- HEADER ---
+st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 
-if st.session_state.page == 'Übersicht':
+# --- NAVIGATION (TABS) ---
+tab_home, tab_admin, tab_new = st.tabs(["🏠 Übersicht", "⚙️ Verwaltung", "➕ Neu"])
+
+
+# --- TAB 1: ÜBERSICHT ---
+with tab_home:
     
     if st.session_state.detail_id is not None:
         # --- DETAIL ANSICHT ---
         
-        # Zurück Button: Wir nutzen hier KEIN st.columns, um Stacking zu vermeiden.
-        # Einfach ein Button ganz oben.
-        # Wir überschreiben das Design für diesen einen Button lokal.
+        # Zurück Button mit Custom Styling Injection (Outline Look)
         st.markdown("""
             <style>
+            /* Wir zielen auf den ersten Button in diesem Tab */
             div.stButton.back-btn > button {
-                background-color: white !important;
-                color: #555 !important;
-                border: 1px solid #ddd !important;
+                background-color: #ffffff !important;
+                color: #555555 !important;
+                border: 1px solid #cccccc !important;
                 width: auto !important;
-                display: inline-block !important;
-                padding: 5px 20px !important;
+                padding: 5px 15px !important;
+                font-size: 14px !important;
+                font-weight: 500 !important;
+                box-shadow: none !important;
+            }
+            div.stButton.back-btn > button:hover {
+                border-color: #000; color: #000 !important;
             }
             </style>
         """, unsafe_allow_html=True)
-        
-        # Key 'back_btn' wird durch obiges CSS nicht direkt erfasst (Streamlit Limitation),
-        # aber da es der erste Button im Flow ist, wirkt das CSS oft nicht spezifisch genug.
-        # TRICK: Wir nutzen columns nur für den Button, um ihn klein zu halten.
-        cb1, cb2 = st.columns([1, 4])
-        with cb1:
-            if st.button("⬅ Zurück", key="back_btn"): 
+
+        # Container für den Button
+        c_back, c_dummy = st.columns([1, 4])
+        with c_back:
+            # Wir geben dem Button keinen speziellen Key, der das CSS kaputt macht,
+            # sondern nutzen die Reihenfolge.
+            if st.button("⬅ Zurück", key="back_btn"):
                 st.session_state.detail_id = None
                 st.rerun()
-            
+        
+        # Daten laden
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         status_raw = str(entry['status'])
         is_defekt = status_raw == "Defekt"
         
+        # Inhalt
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         
         status_color = "#ff3b30" if is_defekt else "#34c759"
@@ -259,7 +261,7 @@ if st.session_state.page == 'Übersicht':
             st.warning("⚠️ Keine GPS-Koordinaten hinterlegt.")
 
     else:
-        # --- LISTEN ANSICHT ---
+        # --- LISTE / KARTE ---
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -269,8 +271,6 @@ if st.session_state.page == 'Übersicht':
                     with st.container():
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
-                        
-                        # Button Style (Primary=Rot, Secondary=Grün)
                         btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -315,9 +315,9 @@ if st.session_state.page == 'Übersicht':
                     folium.Marker([row['breitengrad'], row['laengengrad']], popup=folium.Popup(popup_content, max_width=200), icon=folium.Icon(color=c, icon=ic)).add_to(m)
             st_folium(m, width="100%", height=600)
 
-elif st.session_state.page == 'Verwaltung':
-    st.header("Verwaltung")
-    
+
+# --- TAB 2: VERWALTUNG ---
+with tab_admin:
     st.subheader("Schnell-Update")
     st.markdown("<div style='background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee;'>", unsafe_allow_html=True)
     if not df.empty:
@@ -337,7 +337,10 @@ elif st.session_state.page == 'Verwaltung':
         new_lat = c_v2.number_input("Lat:", value=curr_lat, format="%.5f")
         new_lon = c_v2.number_input("Lon:", value=curr_lon, format="%.5f")
         
-        if st.button("Speichern", type="primary", use_container_width=True):
+        # Speichern Button hier soll "primary" (rot) oder "secondary" (grün) sein? 
+        # Wir wollen ihn Blau (Standard Primary im Theme, aber wir haben Primary Rot überschrieben).
+        # Trick: Wir nehmen Secondary und stylen ihn inline.
+        if st.button("Speichern", key="save_admin", use_container_width=True):
             df.at[row_idx, 'status'] = new_status
             df.at[row_idx, 'breitengrad'] = new_lat
             df.at[row_idx, 'laengengrad'] = new_lon
@@ -392,8 +395,8 @@ elif st.session_state.page == 'Verwaltung':
                 st.success(f"{count} Einträge importiert!")
                 st.rerun()
             except Exception as e: st.error(f"Fehler: {e}")
-    st.markdown("<hr>", unsafe_allow_html=True)
     
+    st.markdown("<hr>", unsafe_allow_html=True)
     st.subheader("Datentabelle")
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
@@ -407,7 +410,7 @@ elif st.session_state.page == 'Verwaltung':
     }
     col_order = ["Löschen?", "status", "nummer", "bundesnummer", "strasse", "plz", "stadt", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
-    if st.button("💾 Speichern", type="primary", use_container_width=True):
+    if st.button("💾 Speichern", key="save_table", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
@@ -422,7 +425,7 @@ elif st.session_state.page == 'Verwaltung':
         curr = df[df['id'] == sel_id].iloc[0]
         if curr['bild_pfad'] and os.path.exists(curr['bild_pfad']): st.image(curr['bild_pfad'], width=150)
         up = st.file_uploader("Foto", type=['jpg','png'])
-        if st.button("Foto speichern", type="primary", use_container_width=True):
+        if st.button("Foto speichern", key="save_photo", use_container_width=True):
             if up:
                 np = save_uploaded_image(up, sel_id)
                 idx = df.index[df['id'] == sel_id].tolist()[0]
@@ -431,7 +434,9 @@ elif st.session_state.page == 'Verwaltung':
                 st.success("Gespeichert!")
                 st.rerun()
 
-elif st.session_state.page == 'Neuer Eintrag':
+
+# --- TAB 3: NEU ---
+with tab_new:
     st.header("Neuer Eintrag")
     with st.form("new"):
         c1, c2 = st.columns(2)
