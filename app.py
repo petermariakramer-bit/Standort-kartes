@@ -33,6 +33,16 @@ IMAGE_FOLDER = 'data/images'
 os.makedirs(DATA_FOLDER, exist_ok=True)
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
+# WICHTIGE HILFSFUNKTION: Rettet Zahlen mit Kommas
+def safe_float(val):
+    if val is None: return 0.0
+    try:
+        # String säubern: Komma zu Punkt, Leerzeichen weg
+        clean_val = str(val).replace(',', '.').strip()
+        return float(clean_val)
+    except (ValueError, TypeError):
+        return 0.0
+
 def save_uploaded_image(uploaded_file, entry_id):
     if uploaded_file is None: return None
     file_ext = uploaded_file.name.split('.')[-1]
@@ -67,9 +77,7 @@ st.markdown("""
         max-width: 100vw !important;
     }
 
-    /* 1. BUTTONS (STATUS FARBEN) */
-    
-    /* Standard = GRÜN (Funktionstüchtig) */
+    /* BUTTONS */
     div.stButton > button:not([kind="primary"]) {
         background-color: #34c759 !important; 
         color: #ffffff !important;
@@ -80,7 +88,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* Primary = ROT (Defekt) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; 
         color: #ffffff !important;
@@ -90,17 +97,11 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* 2. ZURÜCK BUTTON FIX (OUTLINE STYLE) */
-    /* Wir nutzen einen CSS-Selektor für den Button innerhalb des "Zurück"-Containers */
-    div[data-testid="stHorizontalBlock"] > div:first-child div.stButton > button {
-        /* Dies trifft oft den Zurück Button, wenn er links oben ist */
-    }
-    
     div.stButton button[kind="secondary"]:disabled {
         background-color: #eee !important;
     }
 
-    /* TABS Styling (Navigation) */
+    /* TABS */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #ffffff;
@@ -118,7 +119,7 @@ st.markdown("""
         color: #000;
         font-weight: 600;
         padding: 0 15px;
-        flex: 1; /* Tabs teilen sich den Platz */
+        flex: 1; 
     }
     .stTabs [aria-selected="true"] {
         background-color: #0071e3 !important;
@@ -130,8 +131,6 @@ st.markdown("""
     
     hr { margin: 10px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
-    
-    /* Radio Button Fix */
     div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 8px; justify-content: center; }
     </style>
 """, unsafe_allow_html=True)
@@ -139,7 +138,7 @@ st.markdown("""
 
 # --- DATA LOGIC ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_form_fix")
+geolocator = Nominatim(user_agent="berlin_coord_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -148,6 +147,7 @@ def load_data():
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
     try:
+        # Alles als String laden
         df = pd.read_csv(CSV_FILE, dtype=str)
     except:
         return pd.DataFrame(columns=cols)
@@ -155,11 +155,12 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
+    # Status säubern
     df["status"] = df["status"].fillna("Funktionstüchtig").replace(["nan", "Nan", "", "None"], "Funktionstüchtig").str.strip().str.capitalize()
     
-    for c in ["breitengrad", "laengengrad"]:
-        df[c] = df[c].str.replace(',', '.', regex=False)
-        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
+    # Koordinaten mit safe_float reparieren
+    df["breitengrad"] = df["breitengrad"].apply(safe_float)
+    df["laengengrad"] = df["laengengrad"].apply(safe_float)
 
     text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
@@ -171,6 +172,10 @@ def load_data():
 def save_data(df):
     if "status" in df.columns:
         df["status"] = df["status"].astype(str).str.strip().str.capitalize()
+    # Koordinaten als saubere Floats speichern
+    df["breitengrad"] = df["breitengrad"].apply(safe_float)
+    df["laengengrad"] = df["laengengrad"].apply(safe_float)
+    
     df.to_csv(CSV_FILE, index=False)
 
 df = load_data()
@@ -179,7 +184,7 @@ df = load_data()
 # --- HEADER ---
 st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 
-# --- NAVIGATION (TABS) ---
+# --- NAVIGATION ---
 tab_home, tab_admin, tab_new = st.tabs(["🏠 Übersicht", "⚙️ Verwaltung", "➕ Neu"])
 
 
@@ -187,9 +192,8 @@ tab_home, tab_admin, tab_new = st.tabs(["🏠 Übersicht", "⚙️ Verwaltung", 
 with tab_home:
     
     if st.session_state.detail_id is not None:
-        # --- DETAIL ANSICHT ---
+        # DETAIL
         
-        # Custom Style für Zurück Button
         st.markdown("""
             <style>
             div.stButton.back-btn > button {
@@ -238,8 +242,8 @@ with tab_home:
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
             
-        lat = float(entry['breitengrad'])
-        lon = float(entry['laengengrad'])
+        lat = safe_float(entry['breitengrad'])
+        lon = safe_float(entry['laengengrad'])
         if lat != 0.0 and lon != 0.0:
             st.markdown("### Karte")
             m_color = "red" if is_defekt else "green"
@@ -251,7 +255,7 @@ with tab_home:
             st.warning("⚠️ Keine GPS-Koordinaten hinterlegt.")
 
     else:
-        # --- LISTE / KARTE ---
+        # LISTE
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -322,8 +326,10 @@ with tab_admin:
         c_v1, c_v2 = st.columns(2)
         new_status = c_v1.radio("Status:", ["Funktionstüchtig", "Defekt"], index=idx_radio)
         
-        curr_lat = float(df.at[row_idx, 'breitengrad'])
-        curr_lon = float(df.at[row_idx, 'laengengrad'])
+        # KOORDINATEN LESEN (MIT SAFE_FLOAT)
+        curr_lat = safe_float(df.at[row_idx, 'breitengrad'])
+        curr_lon = safe_float(df.at[row_idx, 'laengengrad'])
+        
         new_lat = c_v2.number_input("Lat:", value=curr_lat, format="%.5f")
         new_lon = c_v2.number_input("Lon:", value=curr_lon, format="%.5f")
         
@@ -339,18 +345,22 @@ with tab_admin:
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- IMPORT FIX (MIT FORMULAR) ---
+    # --- IMPORT (ROBUST) ---
     with st.expander("📂 Datei importieren", expanded=False):
-        # WICHTIG: Formular verhindert das Neuladen beim Button-Klick bevor die Datei verarbeitet ist
-        with st.form("import_form"):
-            uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
-            submit_import = st.form_submit_button("Import starten", type="secondary") # Secondary = Grün
-            
-            if submit_import and uploaded_file is not None:
+        uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
+        
+        if uploaded_file is not None:
+            if st.button("Import jetzt starten", key="btn_import_start", type="secondary"):
+                status_placeholder = st.empty()
+                status_placeholder.info("Lese Datei...")
                 try:
-                    if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
-                    elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
-                    else: df_new = pd.read_excel(uploaded_file, dtype=str)
+                    filename = uploaded_file.name.lower()
+                    if filename.endswith(".csv"): 
+                        df_new = pd.read_csv(uploaded_file, dtype=str)
+                    elif filename.endswith(".ods"): 
+                        df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
+                    else: 
+                        df_new = pd.read_excel(uploaded_file, dtype=str)
                     
                     file_cols = [c.lower() for c in df_new.columns]
                     def get_col(kws):
@@ -390,10 +400,10 @@ with tab_admin:
                         count += 1
                     
                     save_data(df)
-                    st.success(f"{count} Einträge erfolgreich importiert! Bitte Seite neu laden.")
+                    status_placeholder.success(f"{count} Einträge erfolgreich importiert!")
                     
                 except Exception as e:
-                    st.error(f"Fehler beim Import: {e}")
+                    status_placeholder.error(f"Fehler: {e}")
     
     st.markdown("<hr>", unsafe_allow_html=True)
     
