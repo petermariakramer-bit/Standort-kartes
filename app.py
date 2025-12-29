@@ -56,14 +56,13 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (HTML LAYOUT FIX) ---
+# --- CSS DESIGN (NO COLUMNS, PURE HTML) ---
 st.markdown("""
     <style>
     /* 1. GRUNDEINSTELLUNGEN */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
-        --secondary-background-color: #f0f2f6;
         --text-color: #262730;
         --font: sans-serif;
     }
@@ -85,24 +84,20 @@ st.markdown("""
     }
 
     /* 2. BUTTONS (STANDORT-BUTTON) */
-    /* Wir stylen den Button so, dass er wie eine Kopfzeile aussieht */
     div.stButton > button:not([kind="primary"]) {
         background-color: #f5f5f7 !important; /* Helles Grau */
         color: #000000 !important;
         border: 1px solid #e5e5ea !important;
         border-radius: 8px !important;
         box-shadow: none !important;
-        padding: 8px 0px !important;
+        padding: 10px 0px !important;
         margin: 0 !important;
-        
-        /* Text Zentrieren */
         text-align: center !important;
         justify-content: center !important;
         display: flex !important;
-        
         width: 100% !important;
         font-size: 16px !important;
-        font-weight: 700 !important; /* Fett */
+        font-weight: 700 !important;
     }
     
     div.stButton > button:not([kind="primary"]):hover {
@@ -111,7 +106,7 @@ st.markdown("""
         border-color: #0071e3 !important;
     }
 
-    /* Primary Buttons (Speichern, Import) */
+    /* Primary Buttons */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -123,7 +118,6 @@ st.markdown("""
     /* 3. LAYOUT HEADER & TEXT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
     
-    /* Trennlinie */
     hr { margin: 15px 0; border-color: #f0f0f0; }
 
     /* Menu Button right */
@@ -235,23 +229,33 @@ if st.session_state.page == 'Übersicht':
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
-                        # Button über volle Breite
                         if st.button(label, key=f"l_{row['id']}", use_container_width=True):
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # 2. ADRESSE & BILD (HTML Layout)
-                        # Wir bauen einen HTML Block, der Adresse und Bild nebeneinander zwingt (Flexbox).
+                        # 2. ADRESSE & BILD (HTML Layout - ROBUST)
+                        # Wir verzichten auf st.columns und nutzen Flexbox.
+                        # flex-shrink: 0 beim Bild ist der Schlüssel!
+                        
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         
                         img_html = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                             b64 = get_image_base64(row['bild_pfad'])
                             if b64:
-                                # Bild fixiert auf 60px Breite
-                                img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; margin-left:10px;">'
+                                img_html = f'''
+                                <img src="data:image/jpeg;base64,{b64}" 
+                                     style="
+                                        width: 60px; 
+                                        height: 60px; 
+                                        object-fit: cover; 
+                                        border-radius: 6px; 
+                                        flex-shrink: 0; /* WICHTIG: Verhindert Schrumpfen */
+                                        margin-left: 10px;
+                                     ">
+                                '''
                         
-                        # HTML Container: Flexbox richtet Text links und Bild rechts aus
+                        # Flexbox Container
                         html_block = f"""
                         <div style="
                             display: flex; 
@@ -259,8 +263,17 @@ if st.session_state.page == 'Übersicht':
                             align-items: center; 
                             margin-top: 5px; 
                             padding: 0 5px;
+                            width: 100%;
                         ">
-                            <div style="font-size:13px; color:#666; line-height:1.3;">{addr_text}</div>
+                            <div style="
+                                font-size: 13px; 
+                                color: #666; 
+                                line-height: 1.3; 
+                                flex-grow: 1; /* Nimmt den restlichen Platz */
+                                word-wrap: break-word; /* Text bricht um */
+                            ">
+                                {addr_text}
+                            </div>
                             {img_html}
                         </div>
                         """
