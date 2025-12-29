@@ -56,11 +56,10 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (THEME OVERRIDE) ---
+# --- CSS DESIGN (IMAGE SIZE FIX) ---
 st.markdown("""
     <style>
     /* 1. THEME VARIABLES OVERRIDE (ZWINGT LIGHT MODE) */
-    /* Das überschreibt die Dark-Mode Einstellungen des iPhones */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
@@ -69,33 +68,33 @@ st.markdown("""
         --font: sans-serif;
     }
     
-    /* Hintergrund der gesamten App erzwingen */
     .stApp {
         background-color: #ffffff !important;
         color: #262730 !important;
     }
+    
+    header {visibility: hidden;}
+    .block-container { padding-top: 2rem !important; }
 
-    /* 2. BUTTONS FIXEN */
-    /* Wir setzen Hintergrund explizit auf Weiß und Text auf Blau/Schwarz */
+    /* 2. BUTTONS WEISS / BLAU */
     div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important;
         color: #000000 !important;
-        border: 1px solid #f0f0f0 !important; /* Ganz feiner Rahmen hilft beim Rendering */
+        border: 1px solid #f0f0f0 !important;
         box-shadow: none !important;
         text-shadow: none !important;
         background-image: none !important;
+        padding: 5px 0px !important;
     }
 
-    /* Hover und Active Status */
     div.stButton > button:not([kind="primary"]):hover,
     div.stButton > button:not([kind="primary"]):active,
     div.stButton > button:not([kind="primary"]):focus {
-        background-color: #f9f9f9 !important; /* Leichtes Grau beim Klicken */
+        background-color: #f9f9f9 !important;
         color: #0071e3 !important;
         border-color: #0071e3 !important;
     }
 
-    /* 3. PRIMARY BUTTONS (Bleiben Blau) */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -104,10 +103,21 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* 4. LAYOUT & TEXT */
-    header {visibility: hidden;}
-    .block-container { padding-top: 2rem !important; }
+    /* 3. BILDER IN DER LISTE OPTIMIEREN */
+    /* Verhindert, dass Bilder unnötigen Platz nach unten einnehmen */
+    div[data-testid="stImage"] {
+        margin-bottom: 0px !important;
+        display: flex;
+        align-items: center; /* Zentriert Bild vertikal zur Zeile */
+        height: 100%;
+    }
+    
+    div[data-testid="stImage"] img {
+        object-fit: cover !important; /* Bild füllt den Platz ohne Verzerrung */
+        border-radius: 6px !important;
+    }
 
+    /* 4. LAYOUT & TEXT */
     .app-title {
         font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
     }
@@ -118,7 +128,6 @@ st.markdown("""
     
     hr { margin: 8px 0; border-color: #e5e5ea; }
 
-    /* 5. MENÜ BUTTON RECHTS */
     div[data-testid="column"]:nth-of-type(2) button {
         float: right;
         font-size: 24px !important;
@@ -127,7 +136,7 @@ st.markdown("""
         border: none !important;
     }
 
-    /* 6. MENÜ BOX */
+    /* 5. MENÜ BOX */
     .menu-box {
         background-color: #ffffff;
         border: 1px solid #e5e5ea;
@@ -136,7 +145,6 @@ st.markdown("""
         margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
-    /* Buttons im Menü */
     .menu-box button {
         text-align: left !important;
         width: 100% !important;
@@ -144,8 +152,6 @@ st.markdown("""
         border-radius: 0px !important;
     }
 
-    /* 7. LISTE FIX */
-    /* Container für Listen-Buttons */
     div[data-testid="column"] button {
         text-align: left !important;
         width: 100% !important;
@@ -174,7 +180,6 @@ with c2:
 # --- MENÜ ---
 if st.session_state.menu_open:
     st.markdown('<div class="menu-box">', unsafe_allow_html=True)
-    # Buttons untereinander im Menü für saubere Optik auf Mobile
     if st.button("🏠  Übersicht", key="nav_home", use_container_width=True): set_page("Übersicht"); st.rerun()
     if st.button("⚙️  Verwaltung", key="nav_admin", use_container_width=True): set_page("Verwaltung"); st.rerun()
     if st.button("➕  Neuer Eintrag", key="nav_add", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
@@ -185,7 +190,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_force_light")
+geolocator = Nominatim(user_agent="berlin_img_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -215,7 +220,7 @@ df = load_data()
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL
+        # DETAIL ANSICHT (GROSSES BILD)
         c_back, c_x = st.columns([1,3])
         with c_back:
             if st.button("← Zurück", key="back_btn"): 
@@ -227,6 +232,7 @@ if st.session_state.page == 'Übersicht':
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
+        # HIER: Bild groß lassen (use_container_width=True)
         if entry['bild_pfad'] and os.path.exists(entry['bild_pfad']):
             st.image(entry['bild_pfad'], use_container_width=True)
             
@@ -247,7 +253,7 @@ if st.session_state.page == 'Übersicht':
             st_folium(m_detail, width="100%", height=250)
 
     else:
-        # LISTE
+        # LISTE (KLEINES BILD)
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -255,13 +261,13 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
+                        # Layout: Text (breit) | Bild (schmal)
                         col_txt, col_img = st.columns([3.5, 1])
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Button
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -271,7 +277,8 @@ if st.session_state.page == 'Übersicht':
                         
                         with col_img:
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
-                                st.image(row['bild_pfad'], use_container_width=True)
+                                # HIER DER FIX: Feste Breite (50px) statt Container-Breite
+                                st.image(row['bild_pfad'], width=50)
                                 
                     st.markdown("<hr>", unsafe_allow_html=True)
             else:
