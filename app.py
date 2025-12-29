@@ -57,7 +57,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN ---
+# --- CSS DESIGN (HEADER MOBILE FIX) ---
 st.markdown("""
     <style>
     :root {
@@ -69,7 +69,7 @@ st.markdown("""
     .stApp { background-color: #ffffff !important; color: #000000 !important; overflow-x: hidden !important; }
     header {visibility: hidden;}
     
-    /* Container Padding */
+    /* Container Padding reduziert für mehr Platz */
     .block-container { 
         padding-top: 1rem !important; 
         padding-left: 0.5rem !important; 
@@ -78,33 +78,33 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* -----------------------------------------------------------
-       MOBILE SPALTEN FIX (HEADER & LISTE)
-       Das hier zwingt Streamlit, Spalten IMMER nebeneinander 
-       anzuzeigen, auch auf dem Handy.
-    ----------------------------------------------------------- */
+    /* -------------------------------------------------------------
+       MOBILE HEADER FIX (DAS WICHTIGSTE)
+       Wir zwingen die ERSTE Spalten-Gruppe (den Header) in eine Zeile.
+    ------------------------------------------------------------- */
+    
+    /* Alle horizontalen Blöcke dürfen nicht umbrechen */
     div[data-testid="stHorizontalBlock"] {
-        flex-direction: row !important; /* WICHTIG: Immer Zeile, nie Spalte */
-        flex-wrap: nowrap !important;   /* WICHTIG: Kein Umbruch */
+        flex-direction: row !important; 
+        flex-wrap: nowrap !important;
         align-items: center !important;
-        gap: 0.5rem !important;
+        width: 100% !important;
     }
     
+    /* Spaltenverhalten: Dürfen schrumpfen, aber nicht auf 0 */
     div[data-testid="column"] {
-        min-width: 0 !important;
-        flex-shrink: 1 !important;
-        width: auto !important;
+        flex: 1 !important;
+        min-width: 0 !important; /* Erlaubt Verkleinerung bei Platzmangel */
     }
 
     /* --- BUTTONS --- */
     
-    /* STANDARD (GRÜN - FUNKTIONSTÜCHTIG) */
+    /* Grün (Standard) */
     div.stButton > button:not([kind="primary"]) {
-        background-color: #34c759 !important; /* Grün */
-        color: #ffffff !important;           /* Weiß */
+        background-color: #34c759 !important; 
+        color: #ffffff !important;
         border: none !important;
         border-radius: 8px !important;
-        box-shadow: none !important;
         padding: 10px 0px !important;
         margin: 0 !important;
         text-align: center !important;
@@ -115,9 +115,9 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* PRIMARY (ROT - DEFEKT) */
+    /* Rot (Defekt) */
     div.stButton > button[kind="primary"] {
-        background-color: #ff3b30 !important; /* Rot */
+        background-color: #ff3b30 !important; 
         color: #ffffff !important;
         border: none !important;
         padding: 10px 20px !important;
@@ -125,18 +125,21 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* --- AUSNAHMEN --- */
-
-    /* Menü Button oben rechts (Transparent/Schwarz) */
+    /* --- MENÜ BUTTON (OBEN RECHTS) --- */
+    /* Wir müssen ihn explizit stylen, da er sonst grün wird */
     div[data-testid="column"]:last-child div.stButton > button:not([kind="primary"]) {
         background-color: transparent !important;
         color: #000000 !important;
+        border: none !important;
+        box-shadow: none !important;
         width: auto !important;
         padding: 0 !important;
-        font-size: 24px !important;
+        font-size: 28px !important; /* Größeres Icon */
+        float: right !important;    /* Rechtsbündig erzwingen */
+        margin-top: -5px !important; /* Etwas hochziehen */
     }
 
-    /* Buttons IM aufgeklappten Menü (Grau) */
+    /* Buttons im ausgeklappten Menü (Grau) */
     .menu-box div.stButton > button:not([kind="primary"]) {
         background-color: #f0f0f5 !important;
         color: #000000 !important;
@@ -145,22 +148,18 @@ st.markdown("""
         font-size: 14px !important;
     }
 
-    /* --- TEXT & LAYOUT --- */
+    /* --- TEXT --- */
     .app-title { 
-        font-size: 24px; 
-        font-weight: 700; 
+        font-size: 22px; 
+        font-weight: 800; 
         color: #000000 !important; 
         margin: 0; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis;
+        line-height: 1.5;
     }
     
-    /* Auf Handy Schrift etwas kleiner machen, damit es neben den Button passt */
-    @media (max-width: 400px) {
-        .app-title { font-size: 20px !important; }
-    }
-
     hr { margin: 15px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
     div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
@@ -168,15 +167,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# --- HEADER ---
-# [5, 1] Verhältnis für maximale Breite des Titels
-c1, c2 = st.columns([5, 1]) 
+# --- HEADER (OPTIMIERTES LAYOUT) ---
+# Wir nutzen [85, 15] damit der Titel fast alles nimmt, der Button aber fix rechts bleibt
+c1, c2 = st.columns([85, 15]) 
 
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
 with c2:
     label = "✖️" if st.session_state.menu_open else "☰"
-    # Dieser Button landet automatisch rechts dank CSS
     if st.button(label, key="menu_main"):
         toggle_menu()
         st.rerun()
@@ -198,7 +196,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_header_fix")
+geolocator = Nominatim(user_agent="berlin_mobile_header_v3")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -206,25 +204,27 @@ def load_data():
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
-    df = pd.read_csv(CSV_FILE)
+    
+    try:
+        df = pd.read_csv(CSV_FILE, dtype=str)
+    except:
+        return pd.DataFrame(columns=cols)
+
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    if "status" in df.columns:
-        df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip().str.capitalize()
-        df["status"] = df["status"].replace(["Nan", "", "None"], "Funktionstüchtig")
+    # Clean Data
+    df["status"] = df["status"].fillna("Funktionstüchtig").replace(["nan", "Nan", "", "None"], "Funktionstüchtig").str.strip().str.capitalize()
     
-    # Koordinaten sicher umwandeln
-    df["breitengrad"] = pd.to_numeric(df["breitengrad"], errors='coerce').fillna(0.0)
-    df["laengengrad"] = pd.to_numeric(df["laengengrad"], errors='coerce').fillna(0.0)
+    for c in ["breitengrad", "laengengrad"]:
+        df[c] = df[c].str.replace(',', '.', regex=False)
+        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
 
-    if "letzte_kontrolle" in df.columns:
-        df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
-        
     text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
-        if col in df.columns:
-            df[col] = df[col].astype(str).replace("nan", "").apply(lambda x: x.replace(".0", "") if x.endswith(".0") else x)
+        df[col] = df[col].replace(["nan", "Nan"], "").astype(str)
+        
+    df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
     return df
 
 def save_data(df):
@@ -243,13 +243,11 @@ if st.session_state.page == 'Übersicht':
         # DETAIL
         c_back, c_x = st.columns([1,3])
         with c_back:
-            # Button (Secondary=Grün)
             if st.button("← Zurück", key="back_btn"): 
                 st.session_state.detail_id = None
                 st.rerun()
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
-        
         status_raw = str(entry['status'])
         is_defekt = status_raw == "Defekt"
         
@@ -257,7 +255,7 @@ if st.session_state.page == 'Übersicht':
         
         status_color = "#ff3b30" if is_defekt else "#34c759"
         icon_symbol = "⚠️" if is_defekt else "✅"
-        st.markdown(f"<div style='margin-bottom:10px; font-weight:600; color:{status_color}'>{icon_symbol} Status: {status_raw}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-bottom:15px; font-weight:700; color:{status_color}; font-size:16px;'>{icon_symbol} {status_raw}</div>", unsafe_allow_html=True)
         
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
@@ -283,7 +281,7 @@ if st.session_state.page == 'Übersicht':
             folium.Marker([lat, lon], icon=folium.Icon(color=m_color, icon=m_icon)).add_to(m_detail)
             st_folium(m_detail, width="100%", height=250)
         else:
-            st.warning("⚠️ Keine GPS-Koordinaten verfügbar.")
+            st.warning("⚠️ Keine GPS-Koordinaten hinterlegt.")
 
     else:
         # LISTE
@@ -296,8 +294,7 @@ if st.session_state.page == 'Übersicht':
                     with st.container():
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
-                        
-                        btn_type = "primary" if is_defekt else "secondary" # Primary=Rot, Secondary=Grün (via CSS)
+                        btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
@@ -351,15 +348,24 @@ elif st.session_state.page == 'Verwaltung':
         selected_label = st.selectbox("Standort wählen:", list(entry_options.keys()))
         selected_id = entry_options[selected_label]
         
-        current_status = str(df.loc[df['id'] == selected_id, 'status'].values[0])
+        row_idx = df.index[df['id'] == selected_id].tolist()[0]
+        current_status = str(df.at[row_idx, 'status'])
         idx_radio = 1 if current_status == "Defekt" else 0
-        new_status = st.radio("Status ändern:", ["Funktionstüchtig", "Defekt"], index=idx_radio, horizontal=True)
         
-        if st.button("Status speichern", type="primary", use_container_width=True):
-            idx = df.index[df['id'] == selected_id].tolist()[0]
-            df.at[idx, 'status'] = new_status
+        c_v1, c_v2 = st.columns(2)
+        new_status = c_v1.radio("Status:", ["Funktionstüchtig", "Defekt"], index=idx_radio)
+        
+        curr_lat = float(df.at[row_idx, 'breitengrad'])
+        curr_lon = float(df.at[row_idx, 'laengengrad'])
+        new_lat = c_v2.number_input("Lat:", value=curr_lat, format="%.5f")
+        new_lon = c_v2.number_input("Lon:", value=curr_lon, format="%.5f")
+        
+        if st.button("Speichern", type="primary", use_container_width=True):
+            df.at[row_idx, 'status'] = new_status
+            df.at[row_idx, 'breitengrad'] = new_lat
+            df.at[row_idx, 'laengengrad'] = new_lon
             save_data(df)
-            st.success(f"Status gespeichert: {new_status}")
+            st.success("Gespeichert!")
             st.rerun()
     else:
         st.info("Keine Einträge.")
@@ -370,9 +376,9 @@ elif st.session_state.page == 'Verwaltung':
         uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
         if uploaded_file and st.button("Import starten", type="secondary"):
             try:
-                if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
-                elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
-                else: df_new = pd.read_excel(uploaded_file)
+                if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
+                elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
+                else: df_new = pd.read_excel(uploaded_file, dtype=str)
                 file_cols = [c.lower() for c in df_new.columns]
                 def get_col(kws):
                     for i, c in enumerate(file_cols):
