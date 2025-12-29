@@ -7,7 +7,6 @@ from geopy.extra.rate_limiter import RateLimiter
 import os
 import datetime
 import base64
-import textwrap # Hilft beim Entfernen der Einrückung
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -63,15 +62,18 @@ st.markdown("""
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
-        --text-color: #262730;
+        --text-color: #000000;
         --font: sans-serif;
     }
+    
     .stApp { 
         background-color: #ffffff !important; 
         color: #000000 !important;
         overflow-x: hidden !important; 
     }
+    
     header {visibility: hidden;}
+    
     .block-container { 
         padding-top: 1rem !important; 
         padding-left: 0.5rem !important;
@@ -80,7 +82,7 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* BUTTONS */
+    /* BUTTON STYLING */
     div.stButton > button:not([kind="primary"]) {
         background-color: #f5f5f7 !important;
         color: #000000 !important;
@@ -96,11 +98,13 @@ st.markdown("""
         font-size: 16px !important;
         font-weight: 700 !important;
     }
+    
     div.stButton > button:not([kind="primary"]):hover {
         background-color: #e5e5ea !important;
-        color: #0071e3 !important;
         border-color: #0071e3 !important;
+        color: #0071e3 !important;
     }
+
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -119,6 +123,7 @@ st.markdown("""
     }
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
     .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; text-align: left !important; background: white !important;}
+    
     section[data-testid="stSidebar"] { display: none; }
     div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
     </style>
@@ -148,7 +153,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_final_fix_v3")
+geolocator = Nominatim(user_agent="berlin_no_indent_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -215,7 +220,7 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # 1. BUTTON (ZEILE 1)
+                        # 1. BUTTON
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
@@ -223,27 +228,27 @@ if st.session_state.page == 'Übersicht':
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # 2. ADRESSE & BILD (HTML ohne Einrückung)
+                        # 2. ADRESSE & BILD (HTML STRING ZUSAMMENBAU)
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         
-                        img_html = ""
+                        # Wir erstellen den Bild-Tag zuerst
+                        img_tag = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                             b64 = get_image_base64(row['bild_pfad'])
                             if b64:
-                                # HTML String alles in einer Zeile oder strikt ohne Einrückung
-                                img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
+                                # WICHTIG: Alles in einer Zeile ohne Umbrüche im String
+                                img_tag = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
                         
-                        # Wir nutzen textwrap.dedent, um sicherzustellen, dass keine Leerzeichen davor stehen
-                        html_code = textwrap.dedent(f"""
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 5px; width: 100%;">
-                                <div style="font-size: 13px; color: #666; line-height: 1.3; flex-grow: 1; word-wrap: break-word;">
-                                    {addr_text}
-                                </div>
-                                {img_html}
-                            </div>
-                        """)
+                        # Jetzt der Container. Wir konkatenieren Strings, um Einrückungsfehler zu vermeiden.
+                        html_container_start = '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; padding:0 5px; width:100%;">'
+                        html_text_part = f'<div style="font-size:13px; color:#666; line-height:1.3; flex-grow:1; word-wrap:break-word;">{addr_text}</div>'
+                        html_container_end = '</div>'
                         
-                        st.markdown(html_code, unsafe_allow_html=True)
+                        # Alles zusammenfügen
+                        final_html = html_container_start + html_text_part + img_tag + html_container_end
+                        
+                        # Rendern
+                        st.markdown(final_html, unsafe_allow_html=True)
                                 
                     st.markdown("<hr>", unsafe_allow_html=True)
             else:
