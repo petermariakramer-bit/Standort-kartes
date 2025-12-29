@@ -56,10 +56,10 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (CARD LAYOUT) ---
+# --- CSS DESIGN (HTML LAYOUT FIX) ---
 st.markdown("""
     <style>
-    /* 1. FORCE LIGHT THEME & SETTINGS */
+    /* 1. GRUNDEINSTELLUNGEN */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
@@ -84,22 +84,10 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* 2. SPALTEN LAYOUT */
-    div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-    }
-    
-    /* Spalten Verhalten */
-    div[data-testid="column"] {
-        min-width: 0 !important;
-        flex-shrink: 1 !important;
-    }
-
-    /* 3. BUTTONS (MITTIG & CARD STYLE) */
+    /* 2. BUTTONS (STANDORT-BUTTON) */
+    /* Wir stylen den Button so, dass er wie eine Kopfzeile aussieht */
     div.stButton > button:not([kind="primary"]) {
-        background-color: #f9f9f9 !important; /* Leicht grau abgesetzt */
+        background-color: #f5f5f7 !important; /* Helles Grau */
         color: #000000 !important;
         border: 1px solid #e5e5ea !important;
         border-radius: 8px !important;
@@ -107,22 +95,23 @@ st.markdown("""
         padding: 8px 0px !important;
         margin: 0 !important;
         
-        /* ZENTRIERUNG */
+        /* Text Zentrieren */
         text-align: center !important;
         justify-content: center !important;
         display: flex !important;
         
         width: 100% !important;
         font-size: 16px !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important; /* Fett */
     }
     
     div.stButton > button:not([kind="primary"]):hover {
-        background-color: #f0f0f5 !important;
+        background-color: #e5e5ea !important;
         color: #0071e3 !important;
         border-color: #0071e3 !important;
     }
 
+    /* Primary Buttons (Speichern, Import) */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -131,25 +120,18 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* 4. TEXT & EXTRAS */
+    /* 3. LAYOUT HEADER & TEXT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
     
-    .address-text { 
-        font-size: 13px; 
-        color: #666666 !important; 
-        margin-top: 5px; 
-        line-height: 1.3; 
-        padding-left: 5px; /* Abstand links */
-    }
-    
-    /* Trennlinie dünner */
-    hr { margin: 12px 0; border-color: #f0f0f0; }
+    /* Trennlinie */
+    hr { margin: 15px 0; border-color: #f0f0f0; }
 
     /* Menu Button right */
     div[data-testid="column"]:last-child button {
         float: right; font-size: 24px !important; color: #000000 !important; background: transparent !important; border: none !important; width: auto !important;
     }
 
+    /* Menü Box */
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
     .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; text-align: left !important; background: white !important;}
     
@@ -182,7 +164,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_card_layout")
+geolocator = Nominatim(user_agent="berlin_html_layout")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -249,35 +231,40 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # 1. BUTTON (ZEILE 1 - VOLLE BREITE)
+                        # 1. STANDORT BUTTON (Kopfzeile)
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
-                        # use_container_width=True macht ihn so breit wie die Zeile
+                        # Button über volle Breite
                         if st.button(label, key=f"l_{row['id']}", use_container_width=True):
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # 2. DETAILS DARUNTER (ZEILE 2 - Adresse Links, Bild Rechts)
-                        # Layout: Adresse [3 Teile] | Bild [1 Teil]
-                        c_addr, c_img = st.columns([3, 1])
+                        # 2. ADRESSE & BILD (HTML Layout)
+                        # Wir bauen einen HTML Block, der Adresse und Bild nebeneinander zwingt (Flexbox).
+                        addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         
-                        with c_addr:
-                            addr = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
-                            st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
+                        img_html = ""
+                        if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
+                            b64 = get_image_base64(row['bild_pfad'])
+                            if b64:
+                                # Bild fixiert auf 60px Breite
+                                img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; margin-left:10px;">'
                         
-                        with c_img:
-                            # Kleines Bild, rechtsbündig im Container
-                            if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
-                                b64 = get_image_base64(row['bild_pfad'])
-                                if b64:
-                                    img_html = f'''
-                                        <div style="display: flex; justify-content: flex-end; align-items: flex-start; padding-top: 5px;">
-                                            <img src="data:image/jpeg;base64,{b64}" 
-                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
-                                        </div>
-                                    '''
-                                    st.markdown(img_html, unsafe_allow_html=True)
+                        # HTML Container: Flexbox richtet Text links und Bild rechts aus
+                        html_block = f"""
+                        <div style="
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: center; 
+                            margin-top: 5px; 
+                            padding: 0 5px;
+                        ">
+                            <div style="font-size:13px; color:#666; line-height:1.3;">{addr_text}</div>
+                            {img_html}
+                        </div>
+                        """
+                        st.markdown(html_block, unsafe_allow_html=True)
                                 
                     st.markdown("<hr>", unsafe_allow_html=True)
             else:
