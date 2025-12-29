@@ -97,8 +97,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* NEUTRALE BUTTONS ÜBERSCHREIBEN */
-    /* Menü Button oben rechts (muss schwarz sein) */
+    /* NEUTRALE BUTTONS ÜBERSCHREIBEN (Menü & Header) */
     div[data-testid="column"]:last-child button:not([kind="primary"]) {
         float: right; 
         font-size: 24px !important; 
@@ -108,7 +107,6 @@ st.markdown("""
         width: auto !important;
     }
 
-    /* Menü Box Buttons (müssen schwarz sein) */
     .menu-box button { 
         width: 100% !important; 
         border: none !important;
@@ -119,7 +117,6 @@ st.markdown("""
         color: #000000 !important; 
     }
 
-    /* LAYOUT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
     hr { margin: 15px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
@@ -151,7 +148,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_final_fix_v4")
+geolocator = Nominatim(user_agent="berlin_status_fix_final")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -163,13 +160,15 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    # DATEN REINIGUNG (CRITICAL FIX)
-    # 1. Status säubern: Leerzeichen weg, String erzwingen
+    # 1. STATUS BEREINIGUNG (WICHTIG!)
+    # Wir zwingen alles zu Strings, entfernen Leerzeichen und machen den ersten Buchstaben groß (Capitalize).
+    # Aus "defekt " wird "Defekt". Aus "FUNKTIONSTÜCHTIG" wird "Funktionstüchtig".
     if "status" in df.columns:
-        df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip()
-        df["status"] = df["status"].replace("nan", "Funktionstüchtig").replace("", "Funktionstüchtig")
+        df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip().str.capitalize()
+        # Fallback für leere Strings oder "Nan"
+        df["status"] = df["status"].replace(["Nan", "", "None"], "Funktionstüchtig")
     
-    # 2. Koordinaten säubern: Erzwinge Zahlen (Float), sonst wird die Karte leer
+    # 2. KOORDINATEN BEREINIGUNG
     df["breitengrad"] = pd.to_numeric(df["breitengrad"], errors='coerce').fillna(0.0)
     df["laengengrad"] = pd.to_numeric(df["laengengrad"], errors='coerce').fillna(0.0)
 
@@ -184,7 +183,7 @@ def load_data():
 
 def save_data(df):
     if "status" in df.columns:
-        df["status"] = df["status"].astype(str).str.strip()
+        df["status"] = df["status"].astype(str).str.strip().str.capitalize()
     df.to_csv(CSV_FILE, index=False)
 
 df = load_data()
@@ -204,16 +203,20 @@ if st.session_state.page == 'Übersicht':
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         
-        # Status Prüfung (Case Insensitive zur Sicherheit)
-        status_raw = str(entry['status']).strip()
-        is_defekt = status_raw.lower() == "defekt"
+        # Sauberer Status Check
+        status_raw = str(entry['status'])
+        is_defekt = status_raw == "Defekt"
         
-        # Titel (Ohne Status Text)
+        # TITEL (Nur Nummer, kein Status-Text im Titel)
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         
-        # Status Anzeige (Extra Zeile)
-        status_color = "red" if is_defekt else "green"
-        st.markdown(f"<span style='color:{status_color}; font-weight:bold;'>Status: {status_raw}</span>", unsafe_allow_html=True)
+        # STATUS ZEILE DARUNTER (Farbig)
+        status_color = "#ff3b30" if is_defekt else "#34c759"
+        icon_symbol = "⚠️" if is_defekt else "✅"
+        st.markdown(
+            f"<div style='margin-bottom:10px; font-weight:600; color:{status_color}'>{icon_symbol} Status: {status_raw}</div>", 
+            unsafe_allow_html=True
+        )
         
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
@@ -229,23 +232,27 @@ if st.session_state.page == 'Übersicht':
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
             
-        # Karte Rendern (Prüfung auf 0.0 float)
-        if entry['breitengrad'] != 0.0 and entry['laengengrad'] != 0.0:
+        # KARTE (Mit Prüfung auf gültige Koordinaten)
+        lat = entry['breitengrad']
+        lon = entry['laengengrad']
+        
+        if lat != 0.0 and lon != 0.0:
             st.markdown("### Karte")
             
-            # Marker Farbe
+            # Farbe ROT wenn Defekt, sonst GRÜN
             m_color = "red" if is_defekt else "green"
             m_icon = "exclamation-sign" if is_defekt else "ok-sign"
             
-            m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
+            m_detail = folium.Map(location=[lat, lon], zoom_start=16, tiles="OpenStreetMap")
             folium.Marker(
-                [entry['breitengrad'], entry['laengengrad']], 
+                [lat, lon], 
                 icon=folium.Icon(color=m_color, icon=m_icon)
             ).add_to(m_detail)
             
             st_folium(m_detail, width="100%", height=250)
         else:
-            st.info("Keine GPS-Koordinaten vorhanden.")
+            # Falls Karte weg war, lag es an fehlenden Koordinaten. Hier die Info:
+            st.warning("⚠️ Keine GPS-Daten für diesen Standort hinterlegt.")
 
     else:
         # LISTE / KARTE
@@ -256,11 +263,10 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # Status Check
-                        curr_stat = str(row['status']).strip()
-                        is_defekt = curr_stat.lower() == "defekt"
+                        # Status Check für Button Farbe
+                        curr_stat = str(row['status'])
+                        is_defekt = curr_stat == "Defekt"
                         
-                        # Button Style
                         btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -294,7 +300,6 @@ if st.session_state.page == 'Übersicht':
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
             
-            # Auto-Zoom auf Daten
             valid_geo = df[(df['breitengrad'] != 0.0) & (df['laengengrad'] != 0.0)]
             if st.session_state.map_zoom == 12 and not valid_geo.empty:
                 sw = valid_geo[['breitengrad', 'laengengrad']].min().values.tolist()
@@ -305,8 +310,8 @@ if st.session_state.page == 'Übersicht':
                 if row['breitengrad'] != 0.0 and row['laengengrad'] != 0.0:
                     
                     # LOGIK KARTE MARKER
-                    st_val = str(row['status']).strip()
-                    is_defekt = st_val.lower() == "defekt"
+                    st_val = str(row['status'])
+                    is_defekt = st_val == "Defekt"
                     
                     c = "red" if is_defekt else "green"
                     ic = "exclamation-sign" if is_defekt else "ok-sign"
@@ -338,11 +343,9 @@ elif st.session_state.page == 'Verwaltung':
         selected_label = st.selectbox("Standort wählen:", list(entry_options.keys()))
         selected_id = entry_options[selected_label]
         
-        # Aktuellen Status lesen
-        current_status_raw = df.loc[df['id'] == selected_id, 'status'].values[0]
-        current_status = str(current_status_raw).strip()
-        
+        current_status = str(df.loc[df['id'] == selected_id, 'status'].values[0])
         idx_radio = 1 if current_status == "Defekt" else 0
+        
         new_status = st.radio("Status ändern:", ["Funktionstüchtig", "Defekt"], index=idx_radio, horizontal=True)
         
         if st.button("Status speichern", type="primary", use_container_width=True):
