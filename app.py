@@ -56,10 +56,10 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN ---
+# --- CSS DESIGN (MOBILE COLUMN FIX) ---
 st.markdown("""
     <style>
-    /* 1. THEME VARIABLES (Force Light Mode) */
+    /* 1. FORCE LIGHT THEME */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
@@ -67,35 +67,43 @@ st.markdown("""
         --text-color: #262730;
         --font: sans-serif;
     }
-    
-    .stApp {
-        background-color: #ffffff !important;
-        color: #262730 !important;
-    }
-    
+    .stApp { background-color: #ffffff !important; color: #000000 !important; }
     header {visibility: hidden;}
     .block-container { padding-top: 1.5rem !important; }
 
-    /* 2. BUTTON STYLING (WHITE BG FIX) */
+    /* 2. MOBILE SPALTEN FIX (Das Wichtigste!) */
+    /* Zwingt Streamlit, Spalten nebeneinander zu lassen, auch auf Handy */
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+    
+    /* Verhindert, dass Spalten zu breit werden */
+    div[data-testid="column"] {
+        min-width: 0 !important; /* Wichtig für Textkürzung */
+        flex: 1 !important;
+    }
+
+    /* 3. BUTTONS CLEAN STYLE */
     div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important; 
         color: #000000 !important;
         border: 1px solid #f0f0f0 !important;
         box-shadow: none !important;
-        text-shadow: none !important;
-        background-image: none !important;
         padding: 6px 2px !important;
         margin: 0 !important;
+        text-align: left !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-
-    div.stButton > button:not([kind="primary"]):hover,
-    div.stButton > button:not([kind="primary"]):active,
-    div.stButton > button:not([kind="primary"]):focus {
+    div.stButton > button:not([kind="primary"]):hover {
         background-color: #f9f9f9 !important;
         color: #0071e3 !important;
         border-color: #0071e3 !important;
     }
 
+    /* Primary Buttons (Speichern) */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -104,54 +112,24 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* 3. LAYOUT & TEXT */
-    .app-title {
-        font-size: 26px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap;
-    }
-    
-    .address-text {
-        font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; 
-    }
-    
+    /* 4. LAYOUT & TEXT */
+    .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
+    .address-text { font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; }
     hr { margin: 8px 0; border-color: #e5e5ea; }
 
-    /* Menü Button Rechts */
+    /* Menu Button right */
     div[data-testid="column"]:nth-of-type(2) button {
-        float: right;
-        font-size: 24px !important;
-        color: #000000 !important;
-        background-color: transparent !important;
-        border: none !important;
+        float: right; font-size: 24px !important; color: #000000 !important; background: transparent !important; border: none !important;
     }
 
-    /* Menü Box */
-    .menu-box {
-        background-color: #ffffff;
-        border: 1px solid #e5e5ea;
-        border-radius: 12px;
-        padding: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .menu-box button {
-        text-align: left !important;
-        width: 100% !important;
-        border-bottom: 1px solid #f0f0f0 !important;
-        border-radius: 0px !important;
-    }
-
-    /* Listen Buttons Links */
-    div[data-testid="column"] button {
-        text-align: left !important;
-        width: 100% !important;
-        padding-left: 0px !important;
-    }
-
-    div.row-widget.stRadio > div {
-        flex-direction: row; background-color: #f2f2f7; padding: 2px;
-        border-radius: 9px; width: 100%; justify-content: center; margin-top: 5px;
-    }
+    /* Menu Box */
+    .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
+    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; }
+    
     section[data-testid="stSidebar"] { display: none; }
+    
+    /* Radio Button Fix */
+    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -179,7 +157,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_height_fix")
+geolocator = Nominatim(user_agent="berlin_mobile_row_fix")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -217,16 +195,13 @@ if st.session_state.page == 'Übersicht':
                 st.rerun()
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
-        
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
-        # Detailbild darf groß sein
         if entry['bild_pfad'] and os.path.exists(entry['bild_pfad']):
             st.image(entry['bild_pfad'], use_container_width=True)
             
         st.markdown("---")
-        
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Typ:** {entry['typ']}")
@@ -234,7 +209,6 @@ if st.session_state.page == 'Übersicht':
             st.markdown(f"**Baujahr:** {entry['baujahr']}")
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
-            
         if entry['breitengrad'] != 0:
             st.markdown("### Karte")
             m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
@@ -242,7 +216,7 @@ if st.session_state.page == 'Übersicht':
             st_folium(m_detail, width="100%", height=250)
 
     else:
-        # LISTE / KARTE
+        # LISTE
         mode = st.radio("Ansicht", ["Liste", "Karte"], horizontal=True, label_visibility="collapsed")
         
         if mode == "Liste":
@@ -250,14 +224,15 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # Layout: Text (breit) | Bild (schmaler)
-                        col_txt, col_img = st.columns([3, 1])
+                        # HIER ZWINGEN WIR DAS LAYOUT:
+                        # Verhältnis [4, 1] gibt dem Text viel Platz, dem Bild wenig.
+                        # Durch das CSS oben (flex-wrap: nowrap) bleiben sie nebeneinander.
+                        col_txt, col_img = st.columns([4, 1])
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
                             if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                             
-                            # Klickbarer Name (Button)
                             if st.button(label, key=f"l_{row['id']}"):
                                 st.session_state.detail_id = row['id']
                                 st.rerun()
@@ -266,17 +241,16 @@ if st.session_state.page == 'Übersicht':
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
                         
                         with col_img:
-                            # HIER IST DER FIX:
-                            # Wir prüfen, ob ein Bild da ist, und rendern es dann als HTML
-                            # mit max-height: 90px (ca. 4 Zeilen).
+                            # HIER DAS BILD
+                            # Wir nutzen festes HTML mit fixer Größe (80x80), damit es klein bleibt.
+                            # 'justify-content: flex-end' schiebt es nach rechts.
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 b64 = get_image_base64(row['bild_pfad'])
                                 if b64:
-                                    # CSS Style für das Bild in der Liste
                                     img_html = f'''
-                                        <div style="display: flex; justify-content: flex-end; align-items: flex-start; height: 100%;">
+                                        <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
                                             <img src="data:image/jpeg;base64,{b64}" 
-                                                 style="max-height: 90px; width: auto; max-width: 100%; border-radius: 6px; object-fit: contain;">
+                                                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px;">
                                         </div>
                                     '''
                                     st.markdown(img_html, unsafe_allow_html=True)
@@ -293,7 +267,6 @@ if st.session_state.page == 'Übersicht':
                     sw = valid[['breitengrad', 'laengengrad']].min().values.tolist()
                     ne = valid[['breitengrad', 'laengengrad']].max().values.tolist()
                     if sw != ne: m.fit_bounds([sw, ne])
-
             for _, row in df.iterrows():
                 if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
                     c = "blue" if row['typ'] == "Dialog Display" else "gray"
@@ -303,12 +276,10 @@ if st.session_state.page == 'Übersicht':
                         if b64: img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; border-radius:6px; margin-bottom:5px;">'
                     popup = f"<div style='width:160px; font-family:sans-serif;'>{img_html}<b>{row['nummer']}</b><br>{row['strasse']}</div>"
                     folium.Marker([row['breitengrad'], row['laengengrad']], popup=folium.Popup(popup, max_width=200), icon=folium.Icon(color=c, icon="info-sign")).add_to(m)
-            
             st_folium(m, width="100%", height=600)
 
 elif st.session_state.page == 'Verwaltung':
     st.header("Verwaltung")
-    
     with st.expander("📂 Datei importieren (Excel / ODS)", expanded=True):
         uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
         if uploaded_file and st.button("Import starten", type="primary"):
@@ -316,14 +287,12 @@ elif st.session_state.page == 'Verwaltung':
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf")
                 else: df_new = pd.read_excel(uploaded_file)
-                
                 file_cols = [c.lower() for c in df_new.columns]
                 def get_col(kws):
                     for i, c in enumerate(file_cols):
                         for kw in kws:
                             if kw in c: return df_new.iloc[:, i]
                     return None
-
                 imp_nr = get_col(["nummer", "nr.", "standort"])
                 imp_b = get_col(["bundes", "b-nr"])
                 imp_s = get_col(["straße", "strasse", "adr"])
@@ -331,7 +300,6 @@ elif st.session_state.page == 'Verwaltung':
                 imp_ort = get_col(["stadt", "ort", "bezirk"])
                 imp_bau = get_col(["baujahr", "jahr"])
                 imp_her = get_col(["hersteller", "firma"])
-                
                 count = 0
                 for idx in range(len(df_new)):
                     nid = pd.Timestamp.now().strftime('%Y%m%d') + f"{idx:04d}"
@@ -343,25 +311,20 @@ elif st.session_state.page == 'Verwaltung':
                     v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
                     v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
                     if v_nr == "nan": v_nr = ""
-                    
                     lat, lon = 0.0, 0.0
                     if v_s and v_o:
                         try:
                             loc = geocode(f"{v_s}, {v_p} {v_o}")
                             if loc: lat, lon = loc.latitude, loc.longitude
                         except: pass
-                    
                     new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her]})
                     df = pd.concat([df, new_row], ignore_index=True)
                     count += 1
-                
                 save_data(df)
                 st.success(f"{count} Einträge importiert!")
                 st.rerun()
             except Exception as e: st.error(f"Fehler: {e}")
-
     st.markdown("<hr>", unsafe_allow_html=True)
-    
     edit_data = df.copy()
     edit_data["Löschen?"] = False 
     column_cfg = {
@@ -377,13 +340,11 @@ elif st.session_state.page == 'Verwaltung':
     }
     col_order = ["Löschen?", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
     edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
-    
     if st.button("💾 Speichern", type="primary", use_container_width=True):
         rows_to_keep = edited_df[edited_df["Löschen?"] == False]
         save_data(rows_to_keep.drop(columns=["Löschen?"]))
         st.success("Gespeichert!")
         st.rerun()
-
     st.markdown("<hr>", unsafe_allow_html=True)
     st.subheader("Bild ändern")
     if not df.empty:
@@ -423,7 +384,6 @@ elif st.session_state.page == 'Neuer Eintrag':
         c_typ, c_dat = st.columns(2)
         typ = c_typ.selectbox("Typ", ["Dialog Display", "Ohne"])
         letzte_kontrolle = c_dat.date_input("Datum", datetime.date.today())
-        
         if st.form_submit_button("Speichern", type="primary", use_container_width=True):
             final_lat, final_lon = 0.0, 0.0
             new_id = pd.Timestamp.now().strftime('%Y%m%d%H%M%S')
