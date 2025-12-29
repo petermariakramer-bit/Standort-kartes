@@ -56,10 +56,10 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (MOBILE COLUMN FIX) ---
+# --- CSS DESIGN (NO SCROLL FIX) ---
 st.markdown("""
     <style>
-    /* 1. FORCE LIGHT THEME */
+    /* 1. FORCE LIGHT THEME & NO SCROLL */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
@@ -67,21 +67,37 @@ st.markdown("""
         --text-color: #262730;
         --font: sans-serif;
     }
-    .stApp { background-color: #ffffff !important; color: #000000 !important; }
+    
+    /* Verhindert horizontales Scrollen global */
+    .stApp { 
+        background-color: #ffffff !important; 
+        color: #000000 !important;
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+    
     header {visibility: hidden;}
-    .block-container { padding-top: 1.5rem !important; }
+    .block-container { 
+        padding-top: 1.5rem !important; 
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
 
-    /* 2. MOBILE SPALTEN FIX (Das Wichtigste!) */
-    /* Zwingt Streamlit, Spalten nebeneinander zu lassen, auch auf Handy */
+    /* 2. MOBILE SPALTEN LAYOUT (Fixed Widths) */
     div[data-testid="stHorizontalBlock"] {
         flex-wrap: nowrap !important;
         align-items: center !important;
+        gap: 0.5rem !important; /* Kleinerer Abstand verhindert Overflow */
+        width: 100% !important;
     }
     
-    /* Verhindert, dass Spalten zu breit werden */
+    /* Spalten Verhalten */
     div[data-testid="column"] {
-        min-width: 0 !important; /* Wichtig für Textkürzung */
-        flex: 1 !important;
+        min-width: 0 !important; /* Erlaubt Schrumpfen */
+        flex-shrink: 1 !important;
+        overflow: hidden !important; /* Schneidet zu langen Text ab */
     }
 
     /* 3. BUTTONS CLEAN STYLE */
@@ -90,12 +106,14 @@ st.markdown("""
         color: #000000 !important;
         border: 1px solid #f0f0f0 !important;
         box-shadow: none !important;
-        padding: 6px 2px !important;
+        padding: 8px 4px !important;
         margin: 0 !important;
         text-align: left !important;
         white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        text-overflow: ellipsis !important; /* Pünktchen bei zu langem Text */
+        width: 100% !important;
+        display: block !important;
     }
     div.stButton > button:not([kind="primary"]):hover {
         background-color: #f9f9f9 !important;
@@ -103,7 +121,7 @@ st.markdown("""
         border-color: #0071e3 !important;
     }
 
-    /* Primary Buttons (Speichern) */
+    /* Primary Buttons */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -114,27 +132,28 @@ st.markdown("""
 
     /* 4. LAYOUT & TEXT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
-    .address-text { font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; }
+    .address-text { font-size: 13px; color: #666666 !important; margin-top: -5px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     hr { margin: 8px 0; border-color: #e5e5ea; }
 
     /* Menu Button right */
     div[data-testid="column"]:nth-of-type(2) button {
-        float: right; font-size: 24px !important; color: #000000 !important; background: transparent !important; border: none !important;
+        float: right; font-size: 24px !important; color: #000000 !important; background: transparent !important; border: none !important; width: auto !important;
     }
 
     /* Menu Box */
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
-    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; }
+    .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; white-space: normal !important; }
     
     section[data-testid="stSidebar"] { display: none; }
     
     /* Radio Button Fix */
-    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; }
+    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
 
 # --- HEADER ---
+# Wir nutzen Columns, um den Titel und das Menü zu trennen
 c1, c2 = st.columns([7, 1])
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
@@ -157,7 +176,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_mobile_row_fix")
+geolocator = Nominatim(user_agent="berlin_noscroll")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -225,9 +244,8 @@ if st.session_state.page == 'Übersicht':
                 for _, row in df_display.iterrows():
                     with st.container():
                         # HIER ZWINGEN WIR DAS LAYOUT:
-                        # Verhältnis [4, 1] gibt dem Text viel Platz, dem Bild wenig.
-                        # Durch das CSS oben (flex-wrap: nowrap) bleiben sie nebeneinander.
-                        col_txt, col_img = st.columns([4, 1])
+                        # Wir geben dem Text 75% Platz und dem Bild 25% (feste Ratios helfen gegen Scrollen)
+                        col_txt, col_img = st.columns([3, 1])
                         
                         with col_txt:
                             label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -241,16 +259,14 @@ if st.session_state.page == 'Übersicht':
                             st.markdown(f"<div class='address-text'>{addr}</div>", unsafe_allow_html=True)
                         
                         with col_img:
-                            # HIER DAS BILD
-                            # Wir nutzen festes HTML mit fixer Größe (80x80), damit es klein bleibt.
-                            # 'justify-content: flex-end' schiebt es nach rechts.
+                            # Das Bild-HTML: Feste Größe, sauberer Container
                             if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                                 b64 = get_image_base64(row['bild_pfad'])
                                 if b64:
                                     img_html = f'''
-                                        <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
+                                        <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; overflow: hidden;">
                                             <img src="data:image/jpeg;base64,{b64}" 
-                                                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px;">
+                                                 style="width: 75px; height: 75px; object-fit: cover; border-radius: 6px;">
                                         </div>
                                     '''
                                     st.markdown(img_html, unsafe_allow_html=True)
