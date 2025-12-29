@@ -70,7 +70,7 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; max-width: 100vw !important; overflow-x: hidden !important;}
 
-    /* BUTTONS (GRÜN = OK / SECONDARY) */
+    /* BUTTONS (GRÜN = OK) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important;
         color: #34c759 !important; /* Grün */
@@ -87,7 +87,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* BUTTONS (ROT = DEFEKT / PRIMARY) */
+    /* BUTTONS (ROT = DEFEKT) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; /* Rot */
         color: #ffffff !important;
@@ -97,7 +97,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* NEUTRALE BUTTONS ÜBERSCHREIBEN (Menü & Header) */
+    /* NEUTRALE BUTTONS (Menü etc.) */
     div[data-testid="column"]:last-child button:not([kind="primary"]) {
         float: right; 
         font-size: 24px !important; 
@@ -146,9 +146,9 @@ if st.session_state.menu_open:
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
 
-# --- LOGIK ---
+# --- LOGIK (FIX FÜR KOORDINATEN) ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_status_fix_final")
+geolocator = Nominatim(user_agent="berlin_safe_load")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -160,17 +160,18 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    # 1. STATUS BEREINIGUNG (WICHTIG!)
-    # Wir zwingen alles zu Strings, entfernen Leerzeichen und machen den ersten Buchstaben groß (Capitalize).
-    # Aus "defekt " wird "Defekt". Aus "FUNKTIONSTÜCHTIG" wird "Funktionstüchtig".
+    # 1. STATUS SÄUBERN
     if "status" in df.columns:
         df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip().str.capitalize()
-        # Fallback für leere Strings oder "Nan"
         df["status"] = df["status"].replace(["Nan", "", "None"], "Funktionstüchtig")
     
-    # 2. KOORDINATEN BEREINIGUNG
-    df["breitengrad"] = pd.to_numeric(df["breitengrad"], errors='coerce').fillna(0.0)
-    df["laengengrad"] = pd.to_numeric(df["laengengrad"], errors='coerce').fillna(0.0)
+    # 2. KOORDINATEN RETTEN (SICHERES PARSING)
+    # Hier verhindern wir, dass Daten gelöscht werden, wenn sie Kommas enthalten
+    for coord_col in ["breitengrad", "laengengrad"]:
+        if coord_col in df.columns:
+            # Zu String wandeln, Komma durch Punkt ersetzen, dann zu Zahl
+            df[coord_col] = df[coord_col].astype(str).str.replace(',', '.', regex=False)
+            df[coord_col] = pd.to_numeric(df[coord_col], errors='coerce').fillna(0.0)
 
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
@@ -203,14 +204,13 @@ if st.session_state.page == 'Übersicht':
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         
-        # Sauberer Status Check
         status_raw = str(entry['status'])
         is_defekt = status_raw == "Defekt"
         
-        # TITEL (Nur Nummer, kein Status-Text im Titel)
+        # Titel (Clean)
         st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
         
-        # STATUS ZEILE DARUNTER (Farbig)
+        # Status Anzeige
         status_color = "#ff3b30" if is_defekt else "#34c759"
         icon_symbol = "⚠️" if is_defekt else "✅"
         st.markdown(
@@ -232,14 +232,13 @@ if st.session_state.page == 'Übersicht':
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
             
-        # KARTE (Mit Prüfung auf gültige Koordinaten)
-        lat = entry['breitengrad']
-        lon = entry['laengengrad']
+        # KARTE (Sichere Anzeige)
+        lat = float(entry['breitengrad'])
+        lon = float(entry['laengengrad'])
         
         if lat != 0.0 and lon != 0.0:
             st.markdown("### Karte")
             
-            # Farbe ROT wenn Defekt, sonst GRÜN
             m_color = "red" if is_defekt else "green"
             m_icon = "exclamation-sign" if is_defekt else "ok-sign"
             
@@ -251,8 +250,7 @@ if st.session_state.page == 'Übersicht':
             
             st_folium(m_detail, width="100%", height=250)
         else:
-            # Falls Karte weg war, lag es an fehlenden Koordinaten. Hier die Info:
-            st.warning("⚠️ Keine GPS-Daten für diesen Standort hinterlegt.")
+            st.warning("⚠️ Keine GPS-Koordinaten verfügbar.")
 
     else:
         # LISTE / KARTE
@@ -263,7 +261,6 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # Status Check für Button Farbe
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
                         
@@ -276,7 +273,6 @@ if st.session_state.page == 'Übersicht':
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # HTML Block
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         img_tag = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
@@ -309,7 +305,6 @@ if st.session_state.page == 'Übersicht':
             for _, row in df.iterrows():
                 if row['breitengrad'] != 0.0 and row['laengengrad'] != 0.0:
                     
-                    # LOGIK KARTE MARKER
                     st_val = str(row['status'])
                     is_defekt = st_val == "Defekt"
                     
@@ -352,16 +347,41 @@ elif st.session_state.page == 'Verwaltung':
             idx = df.index[df['id'] == selected_id].tolist()[0]
             df.at[idx, 'status'] = new_status
             save_data(df)
-            st.success(f"Status gespeichert: {new_status}")
+            st.success(f"Status für {selected_label} geändert.")
             st.rerun()
     else:
         st.info("Keine Einträge.")
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # 2. IMPORT
-    with st.expander("📂 Datei importieren (Excel / ODS)", expanded=False):
-        uploaded_file = st.file_uploader("Datei auswählen", type=["ods", "xlsx", "csv"])
+    # 2. TABELLE (Mit Koordinaten-Bearbeitung)
+    st.subheader("Datentabelle (Koordinaten fixen)")
+    edit_data = df.copy()
+    edit_data["Löschen?"] = False 
+    column_cfg = {
+        "Löschen?": st.column_config.CheckboxColumn("🗑️", width="small"),
+        "id": None, "bild_pfad": None,
+        "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
+        "status": st.column_config.SelectboxColumn("Status", options=["Funktionstüchtig", "Defekt"], required=True),
+        "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
+        "strasse": st.column_config.TextColumn("Str"),
+        "breitengrad": st.column_config.NumberColumn("Lat", format="%.5f"), # 5 Nachkommastellen für Präzision
+        "laengengrad": st.column_config.NumberColumn("Lon", format="%.5f")
+    }
+    col_order = ["Löschen?", "status", "nummer", "bundesnummer", "strasse", "plz", "stadt", "breitengrad", "laengengrad"]
+    edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
+    
+    if st.button("💾 Speichern", type="primary", use_container_width=True):
+        rows_to_keep = edited_df[edited_df["Löschen?"] == False]
+        save_data(rows_to_keep.drop(columns=["Löschen?"]))
+        st.success("Gespeichert!")
+        st.rerun()
+    
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
+    # 3. IMPORT
+    with st.expander("📂 Datei importieren", expanded=False):
+        uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
         if uploaded_file and st.button("Import starten"):
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file)
@@ -391,12 +411,13 @@ elif st.session_state.page == 'Verwaltung':
                     v_bau = str(imp_bau.iloc[idx]) if imp_bau is not None else ""
                     v_her = str(imp_her.iloc[idx]) if imp_her is not None else ""
                     if v_nr == "nan": v_nr = ""
+                    
                     lat, lon = 0.0, 0.0
-                    if v_s and v_o:
-                        try:
-                            loc = geocode(f"{v_s}, {v_p} {v_o}")
-                            if loc: lat, lon = loc.latitude, loc.longitude
-                        except: pass
+                    try:
+                        loc = geocode(f"{v_s}, {v_p} {v_o}")
+                        if loc: lat, lon = loc.latitude, loc.longitude
+                    except: pass
+                    
                     new_row = pd.DataFrame({"id": [nid], "nummer": [v_nr], "bundesnummer": [v_b], "strasse": [v_s], "plz": [v_p], "stadt": [v_o], "typ": ["Dialog Display"], "letzte_kontrolle": [datetime.date.today()], "breitengrad": [lat], "laengengrad": [lon], "bild_pfad": [""], "baujahr": [v_bau], "hersteller": [v_her], "status": ["Funktionstüchtig"]})
                     df = pd.concat([df, new_row], ignore_index=True)
                     count += 1
@@ -404,34 +425,8 @@ elif st.session_state.page == 'Verwaltung':
                 st.success(f"{count} Einträge importiert!")
                 st.rerun()
             except Exception as e: st.error(f"Fehler: {e}")
-    st.markdown("<hr>", unsafe_allow_html=True)
     
-    # 3. TABELLE
-    st.subheader("Datentabelle")
-    edit_data = df.copy()
-    edit_data["Löschen?"] = False 
-    column_cfg = {
-        "Löschen?": st.column_config.CheckboxColumn("🗑️", width="small"),
-        "id": None, "bild_pfad": None,
-        "typ": st.column_config.SelectboxColumn("Typ", options=["Dialog Display", "Ohne"]),
-        "status": st.column_config.SelectboxColumn("Status", options=["Funktionstüchtig", "Defekt"], required=True),
-        "letzte_kontrolle": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
-        "strasse": st.column_config.TextColumn("Str"), "plz": st.column_config.TextColumn("PLZ"), 
-        "stadt": st.column_config.TextColumn("Ort"), "nummer": st.column_config.TextColumn("Nr."),
-        "bundesnummer": st.column_config.TextColumn("B-Nr"),
-        "breitengrad": st.column_config.NumberColumn("Lat", format="%.4f"),
-        "laengengrad": st.column_config.NumberColumn("Lon", format="%.4f")
-    }
-    col_order = ["Löschen?", "status", "nummer", "bundesnummer", "strasse", "plz", "stadt", "typ", "hersteller", "baujahr", "letzte_kontrolle", "breitengrad", "laengengrad"]
-    edited_df = st.data_editor(edit_data, column_config=column_cfg, num_rows="dynamic", use_container_width=True, hide_index=True, column_order=col_order)
-    if st.button("💾 Speichern", type="primary", use_container_width=True):
-        rows_to_keep = edited_df[edited_df["Löschen?"] == False]
-        save_data(rows_to_keep.drop(columns=["Löschen?"]))
-        st.success("Gespeichert!")
-        st.rerun()
     st.markdown("<hr>", unsafe_allow_html=True)
-    
-    # 4. BILD
     st.subheader("Bild ändern")
     if not df.empty:
         opts = {f"{r['nummer']}": r['id'] for i, r in df.sort_values('nummer').iterrows()}
