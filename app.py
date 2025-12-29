@@ -57,7 +57,7 @@ def get_image_base64(file_path):
     with open(file_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- CSS DESIGN (HEADER MOBILE FIX) ---
+# --- CSS DESIGN ---
 st.markdown("""
     <style>
     :root {
@@ -69,7 +69,7 @@ st.markdown("""
     .stApp { background-color: #ffffff !important; color: #000000 !important; overflow-x: hidden !important; }
     header {visibility: hidden;}
     
-    /* Container Padding reduziert für mehr Platz */
+    /* Container Padding reduziert */
     .block-container { 
         padding-top: 1rem !important; 
         padding-left: 0.5rem !important; 
@@ -78,44 +78,43 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* -------------------------------------------------------------
-       MOBILE HEADER FIX (DAS WICHTIGSTE)
-       Wir zwingen die ERSTE Spalten-Gruppe (den Header) in eine Zeile.
-    ------------------------------------------------------------- */
+    /* -----------------------------------------------------------
+       1. MOBILE HEADER FIX (EXTREME)
+    ----------------------------------------------------------- */
     
-    /* Alle horizontalen Blöcke dürfen nicht umbrechen */
+    /* Header Container Zwangsausrichtung */
     div[data-testid="stHorizontalBlock"] {
-        flex-direction: row !important; 
+        flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
-        width: 100% !important;
+        gap: 0 !important; /* Kein Gap zwischen Titel und Menü */
     }
     
-    /* Spaltenverhalten: Dürfen schrumpfen, aber nicht auf 0 */
+    /* Spalten dürfen schrumpfen */
     div[data-testid="column"] {
-        flex: 1 !important;
-        min-width: 0 !important; /* Erlaubt Verkleinerung bei Platzmangel */
+        min-width: 0 !important;
+        padding: 0 5px !important; /* Minimales Padding */
     }
 
-    /* --- BUTTONS --- */
+    /* -----------------------------------------------------------
+       2. BUTTON STYLES
+    ----------------------------------------------------------- */
     
-    /* Grün (Standard) */
+    /* A) STANDARD (Grün - Liste & Detail OK) */
+    /* Wir nutzen einen CSS-Selektor, der NICHT den Zurück-Button trifft (wir geben dem Zurück-Button später eine ID/Container) */
+    
+    /* Default Secondary Button (Grün) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #34c759 !important; 
         color: #ffffff !important;
         border: none !important;
         border-radius: 8px !important;
         padding: 10px 0px !important;
-        margin: 0 !important;
-        text-align: center !important;
-        justify-content: center !important;
-        display: flex !important;
         width: 100% !important;
-        font-size: 16px !important;
         font-weight: 700 !important;
     }
     
-    /* Rot (Defekt) */
+    /* B) PRIMARY (Rot - Defekt) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; 
         color: #ffffff !important;
@@ -125,51 +124,59 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* --- MENÜ BUTTON (OBEN RECHTS) --- */
-    /* Wir müssen ihn explizit stylen, da er sonst grün wird */
-    div[data-testid="column"]:last-child div.stButton > button:not([kind="primary"]) {
+    /* C) MENÜ BUTTON (Oben Rechts - Transparent/Schwarz) */
+    /* Wir zielen auf den Button in der letzten Spalte der ersten Reihe */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child div.stButton > button:not([kind="primary"]) {
         background-color: transparent !important;
         color: #000000 !important;
-        border: none !important;
-        box-shadow: none !important;
         width: auto !important;
+        font-size: 26px !important;
         padding: 0 !important;
-        font-size: 28px !important; /* Größeres Icon */
-        float: right !important;    /* Rechtsbündig erzwingen */
-        margin-top: -5px !important; /* Etwas hochziehen */
+        margin: 0 !important;
+        float: right !important;
     }
 
-    /* Buttons im ausgeklappten Menü (Grau) */
-    .menu-box div.stButton > button:not([kind="primary"]) {
-        background-color: #f0f0f5 !important;
-        color: #000000 !important;
-        border: 1px solid #e5e5ea !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-    }
-
-    /* --- TEXT --- */
+    /* D) "ZURÜCK" BUTTON (Spezieller Look: Outline Grau) */
+    /* Da wir CSS nicht direkt auf eine Button-ID mappen können, nutzen wir einen Trick:
+       Der Zurück Button ist der EINZIGE Button in der Detailansicht oben links. */
+       
+    /* -----------------------------------------------------------
+       3. TYPOGRAFIE & LAYOUT
+    ----------------------------------------------------------- */
     .app-title { 
-        font-size: 22px; 
+        font-size: 24px; 
         font-weight: 800; 
         color: #000000 !important; 
         margin: 0; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis;
-        line-height: 1.5;
     }
     
-    hr { margin: 15px 0; border-color: #f0f0f0; }
+    /* Mobile Anpassung für Titel */
+    @media (max-width: 450px) {
+        .app-title { font-size: 18px !important; } /* Kleiner auf Handy */
+    }
+
+    hr { margin: 10px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
-    div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
+    
+    /* Radio Buttons */
+    div.row-widget.stRadio > div { 
+        flex-direction: row; 
+        background-color: #f2f2f7; 
+        padding: 2px; 
+        border-radius: 8px; 
+        justify-content: center; 
+        margin-top: 5px; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- HEADER (OPTIMIERTES LAYOUT) ---
-# Wir nutzen [85, 15] damit der Titel fast alles nimmt, der Button aber fix rechts bleibt
-c1, c2 = st.columns([85, 15]) 
+# --- HEADER (SAFE LAYOUT) ---
+# Verhältnis 80% zu 20% garantiert Platz für den Button
+c1, c2 = st.columns([8, 2]) 
 
 with c1:
     st.markdown('<div class="app-title">Berlin Lichtenberg</div>', unsafe_allow_html=True)
@@ -181,14 +188,28 @@ with c2:
 
 # --- MENÜ ---
 if st.session_state.menu_open:
-    st.markdown('<div class="menu-box">', unsafe_allow_html=True)
+    # Styles nur für das Menü
+    st.markdown("""
+        <style>
+        div.stButton.menu-btn > button {
+            background-color: #f5f5f7 !important;
+            color: #000000 !important;
+            border: 1px solid #e5e5ea !important;
+            font-weight: 600 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="menu-box" style="margin-bottom:15px;">', unsafe_allow_html=True)
     c_m1, c_m2, c_m3 = st.columns(3)
+    
+    # Wir wrappen die Buttons in Containern für besseres Styling
     with c_m1:
-        if st.button("🏠 Übersicht", use_container_width=True): set_page("Übersicht"); st.rerun()
+        if st.button("🏠 Übersicht", key="m1", use_container_width=True): set_page("Übersicht"); st.rerun()
     with c_m2:
-        if st.button("⚙️ Verwaltung", use_container_width=True): set_page("Verwaltung"); st.rerun()
+        if st.button("⚙️ Verwaltung", key="m2", use_container_width=True): set_page("Verwaltung"); st.rerun()
     with c_m3:
-        if st.button("➕ Neu", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
+        if st.button("➕ Neu", key="m3", use_container_width=True): set_page("Neuer Eintrag"); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
@@ -196,7 +217,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_mobile_header_v3")
+geolocator = Nominatim(user_agent="berlin_header_final")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -204,7 +225,6 @@ def load_data():
     if not os.path.exists(CSV_FILE):
         pd.DataFrame(columns=cols).to_csv(CSV_FILE, index=False)
         return pd.DataFrame(columns=cols)
-    
     try:
         df = pd.read_csv(CSV_FILE, dtype=str)
     except:
@@ -213,7 +233,6 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    # Clean Data
     df["status"] = df["status"].fillna("Funktionstüchtig").replace(["nan", "Nan", "", "None"], "Funktionstüchtig").str.strip().str.capitalize()
     
     for c in ["breitengrad", "laengengrad"]:
@@ -240,10 +259,30 @@ df = load_data()
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL
+        # DETAIL ANSICHT
+        
+        # CSS für den "Zurück" Button hier lokal injizieren
+        st.markdown("""
+            <style>
+            /* Spezieller Style für den ersten Button in der Detail-Ansicht */
+            div[data-testid="column"]:first-child button {
+                background-color: #ffffff !important;
+                color: #555555 !important;
+                border: 1px solid #cccccc !important;
+                font-size: 14px !important;
+                padding: 5px 15px !important;
+                width: auto !important; /* Nicht volle Breite */
+            }
+            div[data-testid="column"]:first-child button:hover {
+                border-color: #000000 !important;
+                color: #000000 !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         c_back, c_x = st.columns([1,3])
         with c_back:
-            if st.button("← Zurück", key="back_btn"): 
+            if st.button("⬅ Zurück", key="back_btn"): 
                 st.session_state.detail_id = None
                 st.rerun()
             
@@ -294,6 +333,7 @@ if st.session_state.page == 'Übersicht':
                     with st.container():
                         curr_stat = str(row['status'])
                         is_defekt = curr_stat == "Defekt"
+                        
                         btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
@@ -374,7 +414,7 @@ elif st.session_state.page == 'Verwaltung':
 
     with st.expander("📂 Datei importieren", expanded=False):
         uploaded_file = st.file_uploader("Datei", type=["ods", "xlsx", "csv"])
-        if uploaded_file and st.button("Import starten", type="secondary"):
+        if uploaded_file and st.button("Import starten"):
             try:
                 if uploaded_file.name.endswith(".csv"): df_new = pd.read_csv(uploaded_file, dtype=str)
                 elif uploaded_file.name.endswith(".ods"): df_new = pd.read_excel(uploaded_file, engine="odf", dtype=str)
