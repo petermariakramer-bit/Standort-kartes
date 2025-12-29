@@ -70,7 +70,7 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; max-width: 100vw !important; overflow-x: hidden !important;}
 
-    /* 1. BUTTONS (GRÜN = OK) */
+    /* BUTTONS (GRÜN = OK / SECONDARY) */
     div.stButton > button:not([kind="primary"]) {
         background-color: #ffffff !important;
         color: #34c759 !important; /* Grün */
@@ -87,7 +87,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* 2. BUTTONS (ROT = DEFEKT - KIND=PRIMARY) */
+    /* BUTTONS (ROT = DEFEKT / PRIMARY) */
     div.stButton > button[kind="primary"] {
         background-color: #ff3b30 !important; /* Rot */
         color: #ffffff !important;
@@ -97,22 +97,18 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* 3. NEUTRALE BUTTONS (MENÜ & HEADER) - ÜBERSCHREIBEN DIE GRÜNE FARBE */
-    
-    /* Menü Button oben rechts */
+    /* NEUTRALE BUTTONS ÜBERSCHREIBEN */
+    /* Menü Button oben rechts (muss schwarz sein) */
     div[data-testid="column"]:last-child button:not([kind="primary"]) {
         float: right; 
         font-size: 24px !important; 
-        color: #000000 !important; /* Schwarz */
+        color: #000000 !important; 
         border: none !important; 
         background: transparent !important; 
         width: auto !important;
     }
 
-    /* Zurück Button im Detail */
-    /* Da wir Buttons nicht per ID ansprechen können, machen wir es spezifisch für Spalten */
-    
-    /* Buttons in der Menü-Box (Navigation) */
+    /* Menü Box Buttons (müssen schwarz sein) */
     .menu-box button { 
         width: 100% !important; 
         border: none !important;
@@ -123,7 +119,7 @@ st.markdown("""
         color: #000000 !important; 
     }
 
-    /* --- LAYOUT --- */
+    /* LAYOUT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
     hr { margin: 15px 0; border-color: #f0f0f0; }
     section[data-testid="stSidebar"] { display: none; }
@@ -155,7 +151,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_status_final_v2")
+geolocator = Nominatim(user_agent="berlin_final_fix_v4")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -167,13 +163,19 @@ def load_data():
     for col in cols:
         if col not in df.columns: df[col] = ""
     
-    # 1. Daten säubern (WICHTIG!)
+    # DATEN REINIGUNG (CRITICAL FIX)
+    # 1. Status säubern: Leerzeichen weg, String erzwingen
     if "status" in df.columns:
-        # Füllt leere Zellen mit "Funktionstüchtig", wandelt in String um und entfernt Leerzeichen
-        df["status"] = df["status"].fillna("Funktionstüchtig").replace("", "Funktionstüchtig").astype(str).str.strip()
+        df["status"] = df["status"].fillna("Funktionstüchtig").astype(str).str.strip()
+        df["status"] = df["status"].replace("nan", "Funktionstüchtig").replace("", "Funktionstüchtig")
     
+    # 2. Koordinaten säubern: Erzwinge Zahlen (Float), sonst wird die Karte leer
+    df["breitengrad"] = pd.to_numeric(df["breitengrad"], errors='coerce').fillna(0.0)
+    df["laengengrad"] = pd.to_numeric(df["laengengrad"], errors='coerce').fillna(0.0)
+
     if "letzte_kontrolle" in df.columns:
         df["letzte_kontrolle"] = pd.to_datetime(df["letzte_kontrolle"], errors='coerce').dt.date
+        
     text_cols = ["nummer", "bundesnummer", "plz", "strasse", "stadt", "typ", "bild_pfad", "baujahr", "hersteller"]
     for col in text_cols:
         if col in df.columns:
@@ -181,7 +183,6 @@ def load_data():
     return df
 
 def save_data(df):
-    # Vor dem Speichern auch nochmal säubern
     if "status" in df.columns:
         df["status"] = df["status"].astype(str).str.strip()
     df.to_csv(CSV_FILE, index=False)
@@ -194,7 +195,7 @@ df = load_data()
 if st.session_state.page == 'Übersicht':
     
     if st.session_state.detail_id is not None:
-        # DETAIL
+        # DETAIL ANSICHT
         c_back, c_x = st.columns([1,3])
         with c_back:
             if st.button("← Zurück", key="back_btn"): 
@@ -203,10 +204,17 @@ if st.session_state.page == 'Übersicht':
             
         entry = df[df['id'] == st.session_state.detail_id].iloc[0]
         
-        status_val = str(entry['status']).strip()
-        status_color = "red" if status_val == "Defekt" else "green"
+        # Status Prüfung (Case Insensitive zur Sicherheit)
+        status_raw = str(entry['status']).strip()
+        is_defekt = status_raw.lower() == "defekt"
         
-        st.markdown(f"## {entry['nummer']} <span style='color:{status_color}; font-size:0.6em;'>● {status_val}</span>", unsafe_allow_html=True)
+        # Titel (Ohne Status Text)
+        st.markdown(f"## {entry['nummer']} - {entry['bundesnummer']}")
+        
+        # Status Anzeige (Extra Zeile)
+        status_color = "red" if is_defekt else "green"
+        st.markdown(f"<span style='color:{status_color}; font-weight:bold;'>Status: {status_raw}</span>", unsafe_allow_html=True)
+        
         st.caption(f"{entry['strasse']}, {entry['plz']} {entry['stadt']}")
         
         if entry['bild_pfad'] and os.path.exists(entry['bild_pfad']):
@@ -220,14 +228,14 @@ if st.session_state.page == 'Übersicht':
             st.markdown(f"**Baujahr:** {entry['baujahr']}")
         with c2:
             st.markdown(f"**Kontrolle:** {entry['letzte_kontrolle']}")
-            st.markdown(f"**Status:** {status_val}")
             
-        if entry['breitengrad'] != 0:
+        # Karte Rendern (Prüfung auf 0.0 float)
+        if entry['breitengrad'] != 0.0 and entry['laengengrad'] != 0.0:
             st.markdown("### Karte")
             
-            # Marker Logik Detail
-            m_color = "red" if status_val == "Defekt" else "green"
-            m_icon = "exclamation-sign" if status_val == "Defekt" else "ok-sign"
+            # Marker Farbe
+            m_color = "red" if is_defekt else "green"
+            m_icon = "exclamation-sign" if is_defekt else "ok-sign"
             
             m_detail = folium.Map(location=[entry['breitengrad'], entry['laengengrad']], zoom_start=16, tiles="OpenStreetMap")
             folium.Marker(
@@ -236,6 +244,8 @@ if st.session_state.page == 'Übersicht':
             ).add_to(m_detail)
             
             st_folium(m_detail, width="100%", height=250)
+        else:
+            st.info("Keine GPS-Koordinaten vorhanden.")
 
     else:
         # LISTE / KARTE
@@ -246,9 +256,12 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # BUTTON STATUS CHECK
-                        current_stat = str(row['status']).strip()
-                        btn_type = "primary" if current_stat == "Defekt" else "secondary"
+                        # Status Check
+                        curr_stat = str(row['status']).strip()
+                        is_defekt = curr_stat.lower() == "defekt"
+                        
+                        # Button Style
+                        btn_type = "primary" if is_defekt else "secondary"
                         
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
@@ -257,7 +270,7 @@ if st.session_state.page == 'Übersicht':
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # HTML ADRESSE & BILD
+                        # HTML Block
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         img_tag = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
@@ -280,25 +293,23 @@ if st.session_state.page == 'Übersicht':
 
         elif mode == "Karte":
             m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap")
-            if st.session_state.map_zoom == 12 and not df.empty:
-                valid = df[(df['breitengrad'] != 0) & (df['breitengrad'].notnull())]
-                if not valid.empty:
-                    sw = valid[['breitengrad', 'laengengrad']].min().values.tolist()
-                    ne = valid[['breitengrad', 'laengengrad']].max().values.tolist()
-                    if sw != ne: m.fit_bounds([sw, ne])
+            
+            # Auto-Zoom auf Daten
+            valid_geo = df[(df['breitengrad'] != 0.0) & (df['laengengrad'] != 0.0)]
+            if st.session_state.map_zoom == 12 and not valid_geo.empty:
+                sw = valid_geo[['breitengrad', 'laengengrad']].min().values.tolist()
+                ne = valid_geo[['breitengrad', 'laengengrad']].max().values.tolist()
+                if sw != ne: m.fit_bounds([sw, ne])
             
             for _, row in df.iterrows():
-                if pd.notnull(row['breitengrad']) and row['breitengrad'] != 0:
+                if row['breitengrad'] != 0.0 and row['laengengrad'] != 0.0:
                     
                     # LOGIK KARTE MARKER
                     st_val = str(row['status']).strip()
+                    is_defekt = st_val.lower() == "defekt"
                     
-                    if st_val == "Defekt":
-                        c = "red"
-                        ic = "exclamation-sign"
-                    else:
-                        c = "green"
-                        ic = "ok-sign" # Folium Icon Namen
+                    c = "red" if is_defekt else "green"
+                    ic = "exclamation-sign" if is_defekt else "ok-sign"
                     
                     img_html = ""
                     if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
@@ -327,20 +338,18 @@ elif st.session_state.page == 'Verwaltung':
         selected_label = st.selectbox("Standort wählen:", list(entry_options.keys()))
         selected_id = entry_options[selected_label]
         
-        # Aktuellen Status lesen und säubern
+        # Aktuellen Status lesen
         current_status_raw = df.loc[df['id'] == selected_id, 'status'].values[0]
         current_status = str(current_status_raw).strip()
         
-        # Sicherstellen, dass Index gültig ist (0 oder 1)
         idx_radio = 1 if current_status == "Defekt" else 0
-        
         new_status = st.radio("Status ändern:", ["Funktionstüchtig", "Defekt"], index=idx_radio, horizontal=True)
         
         if st.button("Status speichern", type="primary", use_container_width=True):
             idx = df.index[df['id'] == selected_id].tolist()[0]
             df.at[idx, 'status'] = new_status
             save_data(df)
-            st.success(f"Status für {selected_label} auf '{new_status}' gesetzt!")
+            st.success(f"Status gespeichert: {new_status}")
             st.rerun()
     else:
         st.info("Keine Einträge.")
