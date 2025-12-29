@@ -7,6 +7,7 @@ from geopy.extra.rate_limiter import RateLimiter
 import os
 import datetime
 import base64
+import textwrap # Hilft beim Entfernen der Einrückung
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -59,23 +60,18 @@ def get_image_base64(file_path):
 # --- CSS DESIGN ---
 st.markdown("""
     <style>
-    /* 1. GRUNDEINSTELLUNGEN */
     :root {
         --primary-color: #0071e3;
         --background-color: #ffffff;
-        --secondary-background-color: #f0f2f6;
         --text-color: #262730;
         --font: sans-serif;
     }
-    
     .stApp { 
         background-color: #ffffff !important; 
         color: #000000 !important;
         overflow-x: hidden !important; 
     }
-    
     header {visibility: hidden;}
-    
     .block-container { 
         padding-top: 1rem !important; 
         padding-left: 0.5rem !important;
@@ -84,14 +80,14 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* 2. BUTTONS (STANDORT-BUTTON) */
+    /* BUTTONS */
     div.stButton > button:not([kind="primary"]) {
         background-color: #f5f5f7 !important;
         color: #000000 !important;
         border: 1px solid #e5e5ea !important;
         border-radius: 8px !important;
         box-shadow: none !important;
-        padding: 8px 0px !important;
+        padding: 10px 0px !important;
         margin: 0 !important;
         text-align: center !important;
         justify-content: center !important;
@@ -100,14 +96,11 @@ st.markdown("""
         font-size: 16px !important;
         font-weight: 700 !important;
     }
-    
     div.stButton > button:not([kind="primary"]):hover {
         background-color: #e5e5ea !important;
         color: #0071e3 !important;
         border-color: #0071e3 !important;
     }
-
-    /* Primary Buttons */
     div.stButton > button[kind="primary"] {
         background-color: #0071e3 !important;
         color: #ffffff !important;
@@ -116,20 +109,16 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* 3. LAYOUT HEADER & TEXT */
+    /* TEXT & LAYOUT */
     .app-title { font-size: 24px; font-weight: 700; color: #000000 !important; margin: 0; white-space: nowrap; }
-    
     hr { margin: 15px 0; border-color: #f0f0f0; }
 
-    /* Menu Button right */
+    /* MENU */
     div[data-testid="column"]:last-child button {
         float: right; font-size: 24px !important; color: #000000 !important; background: transparent !important; border: none !important; width: auto !important;
     }
-
-    /* Menü Box */
     .menu-box { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 10px; margin-bottom: 20px; }
     .menu-box button { width: 100% !important; border-bottom: 1px solid #f0f0f0 !important; border-radius: 0px !important; text-align: left !important; background: white !important;}
-    
     section[data-testid="stSidebar"] { display: none; }
     div.row-widget.stRadio > div { flex-direction: row; background-color: #f2f2f7; padding: 2px; border-radius: 9px; justify-content: center; margin-top: 5px; }
     </style>
@@ -159,7 +148,7 @@ st.markdown("<div style='border-bottom: 1px solid #e5e5ea; margin-top: 5px; marg
 
 # --- LOGIK ---
 CSV_FILE = 'data/locations.csv'
-geolocator = Nominatim(user_agent="berlin_html_fix_v2")
+geolocator = Nominatim(user_agent="berlin_final_fix_v3")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5)
 
 def load_data():
@@ -226,7 +215,7 @@ if st.session_state.page == 'Übersicht':
                 df_display = df.sort_values(by='nummer', ascending=True)
                 for _, row in df_display.iterrows():
                     with st.container():
-                        # 1. BUTTON
+                        # 1. BUTTON (ZEILE 1)
                         label = f"{row['nummer']} - {row['bundesnummer']}"
                         if label.strip() in ["-", " - "]: label = "Ohne Nummer"
                         
@@ -234,27 +223,27 @@ if st.session_state.page == 'Übersicht':
                             st.session_state.detail_id = row['id']
                             st.rerun()
                         
-                        # 2. ADRESSE & BILD (HTML)
+                        # 2. ADRESSE & BILD (HTML ohne Einrückung)
                         addr_text = f"{row['strasse']}<br>{row['plz']} {row['stadt']}".strip()
                         
-                        # Bild-HTML vorbereiten (nur wenn Bild existiert)
-                        img_tag = ""
+                        img_html = ""
                         if row['bild_pfad'] and os.path.exists(row['bild_pfad']):
                             b64 = get_image_base64(row['bild_pfad'])
                             if b64:
-                                # Wir bauen den String als normalen f-String, damit er nicht kaputt geht
-                                img_tag = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
+                                # HTML String alles in einer Zeile oder strikt ohne Einrückung
+                                img_html = f'<img src="data:image/jpeg;base64,{b64}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0; margin-left:10px;">'
                         
-                        # Kompletter HTML Block
-                        html_block = f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 5px; width: 100%;">
-                            <div style="font-size: 13px; color: #666; line-height: 1.3; flex-grow: 1; word-wrap: break-word;">
-                                {addr_text}
+                        # Wir nutzen textwrap.dedent, um sicherzustellen, dass keine Leerzeichen davor stehen
+                        html_code = textwrap.dedent(f"""
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 5px; width: 100%;">
+                                <div style="font-size: 13px; color: #666; line-height: 1.3; flex-grow: 1; word-wrap: break-word;">
+                                    {addr_text}
+                                </div>
+                                {img_html}
                             </div>
-                            {img_tag}
-                        </div>
-                        """
-                        st.markdown(html_block, unsafe_allow_html=True)
+                        """)
+                        
+                        st.markdown(html_code, unsafe_allow_html=True)
                                 
                     st.markdown("<hr>", unsafe_allow_html=True)
             else:
